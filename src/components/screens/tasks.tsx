@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Plus, ChevronDown, ShoppingCart, Sparkles, Trash2, RotateCcw, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
@@ -118,7 +118,7 @@ export function TasksScreen() {
     return () => { cancelled = true; };
   }, [currentUser]);
 
-  // Fetch tasks
+  // Fetch tasks — only when house changes (Realtime handles subsequent updates)
   const fetchTasks = useCallback(() => {
     const houseId = activeHouse?.id;
     if (!houseId) return;
@@ -142,7 +142,7 @@ export function TasksScreen() {
     setHouseSwitcherOpen(false);
   };
 
-  // OPTIMISTIC toggle
+  // OPTIMISTIC toggle — let Realtime handle refetch, don't double-fetch
   const toggleTask = (task: Task) => {
     const snapshot = [...tasks];
     const nextIsDone = !task.isDone;
@@ -161,27 +161,60 @@ export function TasksScreen() {
       method: 'PATCH',
       body: JSON.stringify({ isDone: nextIsDone }),
     })
-      .then((r) => { if (!r.ok) throw new Error(); })
-      .then(() => fetchTasks())
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        // Success — Realtime will refetch, no need to fetchTasks() here
+      })
       .catch(() => {
+        // Only rollback on actual API failure, not on fetch failure
         setTasks(snapshot);
         showToast('Не удалось обновить');
       });
   };
 
-  // OPTIMISTIC delete
+  // OPTIMISTIC delete — let Realtime handle refetch
   const deleteTask = (task: Task) => {
     const snapshot = [...tasks];
     setTasks(snapshot.filter((t) => t.id !== task.id));
     showToast('Задача удалена');
 
     authFetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
-      .then((r) => { if (!r.ok) throw new Error(); })
-      .then(() => fetchTasks())
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        // Success — Realtime will refetch
+      })
       .catch(() => {
         setTasks(snapshot);
         showToast('Не удалось удалить');
       });
+  };
+
+  // Clear all done — only removes tasks in current category, not cross-category
+  const clearDoneTasks = () => {
+    setShowClearConfirm(false);
+    const currentCatDoneIds = tasks
+      .filter((t) => t.category === activeCategory && t.isDone)
+      .map((t) => t.id);
+
+    if (currentCatDoneIds.length === 0) return;
+
+    const snapshot = [...tasks];
+    // Only remove the tasks we're actually deleting
+    const deletingIds = new Set(currentCatDoneIds);
+    setTasks(snapshot.filter((t) => !deletingIds.has(t.id)));
+    showToast('Очищено');
+
+    Promise.all(
+      currentCatDoneIds.map((id) =>
+        authFetch(`/api/tasks/${id}`, { method: 'DELETE' }).then((r) => {
+          if (!r.ok) throw new Error();
+        })
+      )
+    ).catch(() => {
+      // On any failure, rollback only and let next Realtime fetch fix the state
+      setTasks(snapshot);
+      showToast('Ошибка очистки');
+    });
   };
 
   // ─── No group state ───
@@ -254,7 +287,7 @@ export function TasksScreen() {
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   const filteredTasks = safeTasks.filter((t) => t.category === activeCategory);
   const activeTasks = filteredTasks.filter((t) => !t.isDone);
-  const doneTasks = filteredTasks.filter((t) => t.isDone).slice(0, 10);
+  const doneTasks = filteredTasks.filter((t) => t.isDone);
 
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', height: '100vh', overflow: 'hidden' }}>
@@ -342,14 +375,7 @@ export function TasksScreen() {
             <div className="flex gap-3">
               <button onClick={() => setShowClearConfirm(false)} className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold" style={{ background: 'var(--ios-toggle-bg)', color: 'var(--ios-text-primary)' }}>Отмена</button>
               <button
-                onClick={() => {
-                  setShowClearConfirm(false);
-                  const snapshot = [...tasks];
-                  const doneIds = doneTasks.map((t) => t.id);
-                  setTasks(snapshot.filter((t) => !t.isDone));
-                  showToast('Очищено');
-                  Promise.all(doneIds.map((id) => authFetch(`/api/tasks/${id}`, { method: 'DELETE' }))).catch(() => { setTasks(snapshot); showToast('Ошибка очистки'); });
-                }}
+                onClick={clearDoneTasks}
                 className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold text-white" style={{ background: '#FF3B30' }}
               >Удалить</button>
             </div>
