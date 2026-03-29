@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
 import { useAppStore, authFetch } from '@/lib/store';
+import { Camera, ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 
 interface FriendOption {
   id: string;
@@ -33,6 +34,14 @@ function AddWishSheetInner({ onAdd }: { onAdd: AddWishSheetProps['onAdd'] }) {
   const [friends, setFriends] = useState<FriendOption[]>([]);
   const [friendsLoaded, setFriendsLoaded] = useState(false);
 
+  // Image state
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoMode, setPhotoMode] = useState<'none' | 'file' | 'url'>('none');
+  const [urlInput, setUrlInput] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   // Load friends on mount
   if (currentUser && !friendsLoaded) {
     setFriendsLoaded(true);
@@ -55,10 +64,77 @@ function AddWishSheetInner({ onAdd }: { onAdd: AddWishSheetProps['onAdd'] }) {
 
   const selectedFriendName = friends.find((f) => f.id === selectedFriendId)?.displayName || '';
 
+  // Handle file selection (gallery or camera)
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 10MB before compression)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Слишком большой файл. Максимум 10 МБ.');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Read file as data URL
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        try {
+          // Send to server for compression
+          const res = await authFetch('/api/wishlist/upload-image', {
+            method: 'POST',
+            body: JSON.stringify({ imageBase64: base64 }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setPhotoUrl(data.photoUrl);
+            setPhotoMode('file');
+          } else {
+            // Fallback: use original base64
+            setPhotoUrl(base64);
+            setPhotoMode('file');
+          }
+        } catch {
+          // Fallback: use original base64
+          setPhotoUrl(base64);
+          setPhotoMode('file');
+        } finally {
+          setUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUploading(false);
+    }
+
+    // Reset file input
+    e.target.value = '';
+  };
+
+  // Handle URL confirmation
+  const handleUrlConfirm = () => {
+    if (urlInput.trim()) {
+      setPhotoUrl(urlInput.trim());
+      setPhotoMode('url');
+      setUrlInput('');
+    }
+  };
+
+  // Remove photo
+  const handleRemovePhoto = () => {
+    setPhotoUrl(null);
+    setPhotoMode('none');
+    setUrlInput('');
+  };
+
   const handleSubmit = () => {
     if (!title.trim()) return;
     onAdd({
       title: title.trim(),
+      photoUrl: photoUrl || undefined,
       price: price.trim() || undefined,
       link: link.trim() || undefined,
       comment: comment.trim() || undefined,
@@ -81,13 +157,127 @@ function AddWishSheetInner({ onAdd }: { onAdd: AddWishSheetProps['onAdd'] }) {
         />
       </div>
 
+      {/* ── Image upload ── */}
+      <div>
+        <p className="text-[13px] mb-2" style={{ color: '#8E8E93' }}>Фото</p>
+
+        {/* Photo preview */}
+        {photoUrl && (
+          <div className="relative rounded-xl overflow-hidden mb-3" style={{ background: 'var(--ios-toggle-bg)' }}>
+            <div className="relative" style={{ aspectRatio: '16/10' }}>
+              <img
+                src={photoUrl}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <button
+              onClick={handleRemovePhoto}
+              className="absolute top-2 right-2 w-[28px] h-[28px] rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(0,0,0,0.5)' }}
+            >
+              <X size={16} color="white" strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
+
+        {/* Upload options (only show if no photo) */}
+        {!photoUrl && !uploading && (
+          <>
+            <div className="flex gap-2">
+              {/* Camera */}
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex-1 flex items-center justify-center gap-2 py-[10px] rounded-xl text-[14px] font-medium transition-colors active:opacity-70"
+                style={{ background: 'var(--ios-toggle-bg)', color: 'var(--ios-text-primary)' }}
+              >
+                <Camera size={18} strokeWidth={1.8} />
+                Камера
+              </button>
+              {/* Gallery */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 flex items-center justify-center gap-2 py-[10px] rounded-xl text-[14px] font-medium transition-colors active:opacity-70"
+                style={{ background: 'var(--ios-toggle-bg)', color: 'var(--ios-text-primary)' }}
+              >
+                <ImageIcon size={18} strokeWidth={1.8} />
+                Галерея
+              </button>
+              {/* URL */}
+              <button
+                onClick={() => setPhotoMode(photoMode === 'url' ? 'none' : 'url')}
+                className="flex-1 flex items-center justify-center gap-2 py-[10px] rounded-xl text-[14px] font-medium transition-colors active:opacity-70"
+                style={{
+                  background: photoMode === 'url' ? '#007AFF' : 'var(--ios-toggle-bg)',
+                  color: photoMode === 'url' ? '#ffffff' : 'var(--ios-text-primary)',
+                }}
+              >
+                <LinkIcon size={18} strokeWidth={1.8} />
+                URL
+              </button>
+            </div>
+
+            {/* URL input row */}
+            {photoMode === 'url' && (
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  className="ios-input flex-1"
+                  placeholder="https://example.com/image.jpg"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleUrlConfirm()}
+                />
+                <button
+                  onClick={handleUrlConfirm}
+                  disabled={!urlInput.trim()}
+                  className="px-4 rounded-xl text-[14px] font-semibold text-white transition-opacity active:opacity-70"
+                  style={{ background: '#007AFF', opacity: urlInput.trim() ? 1 : 0.4 }}
+                >
+                  OK
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Uploading indicator */}
+        {uploading && (
+          <div className="flex items-center justify-center py-4 gap-2">
+            <div
+              className="w-[20px] h-[20px] rounded-full border-2 animate-spin"
+              style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }}
+            />
+            <span className="text-[13px]" style={{ color: '#8E8E93' }}>Загрузка...</span>
+          </div>
+        )}
+
+        {/* Hidden file inputs */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+      </div>
+
       {/* Price */}
       <div>
         <p className="text-[13px] mb-2" style={{ color: '#8E8E93' }}>Цена</p>
         <input
           type="text"
+          inputMode="numeric"
           className="ios-input"
-          placeholder="1 990 ₽"
+          placeholder="6 000 000 ₽"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />

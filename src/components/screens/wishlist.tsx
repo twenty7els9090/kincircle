@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Gift, Trash2, ExternalLink,
-  ChevronRight, Info,
+  ChevronRight,
 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
@@ -43,11 +43,25 @@ interface FriendsWishList {
   user: { id: string; displayName: string; avatarUrl: string | null };
 }
 
+/* ─── Helpers ─── */
+
+/** Format number string with space thousands separator + ₽ symbol */
+function formatPrice(raw: string | null): string | null {
+  if (!raw) return null;
+  // Strip existing ₽ and spaces for clean parsing
+  const cleaned = raw.replace(/[₽\s]/g, '').replace(',', '.');
+  const num = parseFloat(cleaned);
+  if (isNaN(num)) return raw; // fallback to raw if not a number
+  const formatted = num.toLocaleString('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+  return `${formatted} ₽`;
+}
+
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 360;
-const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════
    Main Screen
@@ -118,7 +132,6 @@ function MyWishlist() {
   const [wishList, setWishList] = useState<WishList | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddSheet, setShowAddSheet] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   // Fetch wishlist
   const fetchWishlist = useCallback(async () => {
@@ -147,13 +160,6 @@ function MyWishlist() {
     window.addEventListener('kinnect:wishlist-changed', handler);
     return () => window.removeEventListener('kinnect:wishlist-changed', handler);
   }, [fetchWishlist]);
-
-  // Clamp index
-  useEffect(() => {
-    if (!wishList) return;
-    if (wishList.items.length === 0) setCurrentIndex(0);
-    else if (currentIndex >= wishList.items.length) setCurrentIndex(wishList.items.length - 1);
-  }, [wishList?.items.length, currentIndex]);
 
   // Add item
   const handleAddItem = async (item: {
@@ -203,7 +209,6 @@ function MyWishlist() {
   };
 
   const items = wishList?.items || [];
-  const currentItem = items[currentIndex];
 
   if (loading) {
     return (
@@ -246,33 +251,19 @@ function MyWishlist() {
           </button>
         </div>
       ) : (
-        <>
-          {/* ── Card Stack ── */}
-          <div className="flex flex-col items-center px-4 mt-2">
-            <OwnCardStack
-              items={items}
-              currentIndex={currentIndex}
-              onIndexChange={setCurrentIndex}
+        /* ── Wish items list ── */
+        <div className="px-4 pb-24 space-y-3">
+          {items.map((item, index) => (
+            <WishItemCard
+              key={item.id}
+              item={item}
+              index={index}
+              dark={darkMode}
               onDelete={handleDeleteItem}
-              dark={darkMode}
+              own
             />
-
-            {/* Dots */}
-            <DotsIndicator
-              total={items.length}
-              current={currentIndex}
-              dark={darkMode}
-              onDotPress={setCurrentIndex}
-            />
-          </div>
-
-          {/* ── Detail Card ── */}
-          {currentItem && (
-            <div className="px-4 mt-2 pb-24">
-              <OwnDetailCard item={currentItem} dark={darkMode} />
-            </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
 
       {/* ── FAB ── */}
@@ -297,48 +288,45 @@ function MyWishlist() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Own Card Stack (swipe to navigate, long-press to delete)
+   Wish Item Card
    ═══════════════════════════════════════════════════════ */
 
-function OwnCardStack({
-  items,
-  currentIndex,
-  onIndexChange,
-  onDelete,
+function WishItemCard({
+  item,
+  index,
   dark,
+  onDelete,
+  own,
 }: {
-  items: WishItem[];
-  currentIndex: number;
-  onIndexChange: (i: number) => void;
-  onDelete: (id: string) => void;
+  item: WishItem;
+  index: number;
   dark?: boolean;
+  onDelete: (id: string) => void;
+  own: boolean;
 }) {
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const [swipeDelta, setSwipeDelta] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartY = useRef(0);
 
-  const currentItem = items[currentIndex];
-  if (!currentItem) return null;
+  const bgColor = dark ? '#1C1C1E' : '#ffffff';
+  const textColor = dark ? '#F5F5F7' : '#1C1C1E';
+  const metaColor = '#8E8E93';
+  const subtleBg = dark ? '#2C2C2E' : '#F2F2F7';
+  const borderColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
-  const hasNext1 = currentIndex + 1 < items.length;
-  const hasNext2 = currentIndex + 2 < items.length;
+  const formattedPrice = formatPrice(item.price);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     longPressTimer.current = setTimeout(() => setShowDelete(true), 600);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    const dx = e.touches[0].clientX - touchStartX.current;
     const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
     if (longPressTimer.current && dy > 10) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
-    setSwipeDelta(dx);
   };
 
   const handleTouchEnd = () => {
@@ -346,105 +334,88 @@ function OwnCardStack({
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
-    if (swipeDelta < -SWIPE_THRESHOLD && currentIndex < items.length - 1) {
-      onIndexChange(currentIndex + 1);
-    } else if (swipeDelta > SWIPE_THRESHOLD && currentIndex > 0) {
-      onIndexChange(currentIndex - 1);
-    }
-    setSwipeDelta(0);
   };
 
   return (
     <>
-      <div
-        className="relative w-full"
-        style={{ height: CARD_HEIGHT }}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: index * 0.04 }}
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: bgColor,
+          border: `0.5px solid ${borderColor}`,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        }}
+        onTouchStart={own ? handleTouchStart : undefined}
+        onTouchMove={own ? handleTouchMove : undefined}
+        onTouchEnd={own ? handleTouchEnd : undefined}
       >
-        {/* Ghost card 2 */}
-        {hasNext2 && (
-          <div
-            className="absolute rounded-[20px]"
-            style={{
-              top: 0, left: 0, right: 0, height: CARD_HEIGHT,
-              background: PLACEHOLDER_COLORS[(currentIndex + 2) % PLACEHOLDER_COLORS.length],
-              transform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
-              WebkitTransform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
-              opacity: 0.45,
-            }}
-          />
-        )}
-
-        {/* Ghost card 1 */}
-        {hasNext1 && (
-          <div
-            className="absolute rounded-[20px]"
-            style={{
-              top: 0, left: 0, right: 0, height: CARD_HEIGHT,
-              background: PLACEHOLDER_COLORS[(currentIndex + 1) % PLACEHOLDER_COLORS.length],
-              transform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
-              WebkitTransform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
-              opacity: 0.7,
-            }}
-          />
-        )}
-
-        {/* Top card */}
-        <motion.div
-          className="absolute rounded-[24px] overflow-hidden"
-          style={{
-            top: 0, left: 0, right: 0, height: CARD_HEIGHT,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          }}
-          animate={{ x: swipeDelta }}
-          transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* Full image */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length],
-            }}
-          >
-            {currentItem.photoUrl ? (
-              <img
-                src={currentItem.photoUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Gift size={48} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
-              </div>
-            )}
+        {/* ── Image ── */}
+        {item.photoUrl && (
+          <div className="relative w-full" style={{ aspectRatio: '16/10' }}>
+            <img
+              src={item.photoUrl}
+              alt={item.title}
+              className="w-full h-full object-cover"
+            />
+            {/* Subtle gradient at bottom of image for text readability */}
+            <div
+              className="absolute inset-x-0 bottom-0 h-[40%]"
+              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.15), transparent)' }}
+            />
           </div>
+        )}
 
-          {/* Gradient overlay — bottom */}
-          <div
-            className="absolute inset-x-0 bottom-0"
-            style={{
-              height: '55%',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
-            }}
-          />
+        {/* ── Content ── */}
+        <div className="p-4 space-y-2.5">
+          {/* Title */}
+          <p className="text-[17px] font-semibold leading-snug" style={{ color: textColor }}>
+            {item.title}
+          </p>
 
-          {/* Text on image */}
-          <div className="absolute inset-x-0 bottom-0 p-5">
-            <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">
-              {currentItem.title}
+          {/* Price */}
+          {formattedPrice && (
+            <p className="text-[15px] font-medium" style={{ color: '#007AFF' }}>
+              {formattedPrice}
             </p>
-            {currentItem.price && (
-              <p className="text-[15px] mt-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                {currentItem.price}
-              </p>
-            )}
-          </div>
-        </motion.div>
-      </div>
+          )}
 
-      {/* Delete confirmation */}
+          {/* Link */}
+          {item.link && (
+            <a
+              href={item.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium"
+              style={{ color: '#007AFF' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink size={13} strokeWidth={2} />
+              Открыть ссылку
+            </a>
+          )}
+
+          {/* Comment */}
+          {item.comment && (
+            <div className="rounded-xl p-3" style={{ background: subtleBg }}>
+              <p className="text-[14px] leading-relaxed" style={{ color: metaColor }}>
+                {item.comment}
+              </p>
+            </div>
+          )}
+
+          {/* Visibility hint for own items */}
+          {own && item.visibleTo && (
+            <p className="text-[12px]" style={{ color: '#FF9500' }}>
+              👁 Видно только одному человеку
+            </p>
+          )}
+        </div>
+      </motion.div>
+
+      {/* ── Delete confirmation overlay ── */}
       <AnimatePresence>
         {showDelete && (
           <motion.div
@@ -479,7 +450,7 @@ function OwnCardStack({
                 Удалить желание?
               </p>
               <p className="text-[13px] mb-5" style={{ color: '#8E8E93' }}>
-                &laquo;{currentItem.title}&raquo; будет удалено безвозвратно
+                &laquo;{item.title}&raquo; будет удалено безвозвратно
               </p>
               <div className="flex gap-3">
                 <button
@@ -495,7 +466,7 @@ function OwnCardStack({
                 <button
                   onClick={() => {
                     setShowDelete(false);
-                    onDelete(currentItem.id);
+                    onDelete(item.id);
                   }}
                   className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold text-white"
                   style={{ background: '#FF3B30' }}
@@ -508,66 +479,6 @@ function OwnCardStack({
         )}
       </AnimatePresence>
     </>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   Own Detail Card
-   ═══════════════════════════════════════════════════════ */
-
-function OwnDetailCard({ item, dark }: { item: WishItem; dark?: boolean }) {
-  const cardBg = dark ? '#1C1C1E' : '#ffffff';
-  const textColor = dark ? '#F5F5F7' : '#1C1C1E';
-  const metaColor = '#8E8E93';
-  const subtleBg = dark ? '#2C2C2E' : '#F2F2F7';
-
-  return (
-    <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: cardBg,
-        border: dark ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.08)',
-      }}
-    >
-      <p className="text-[17px] font-semibold leading-snug" style={{ color: textColor }}>
-        {item.title}
-      </p>
-
-      {item.price && (
-        <p className="text-[15px]" style={{ color: metaColor }}>{item.price}</p>
-      )}
-
-      {item.link && (
-        <a
-          href={item.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[13px] font-medium"
-          style={{ color: '#007AFF' }}
-        >
-          <ExternalLink size={13} strokeWidth={2} />
-          Открыть ссылку
-        </a>
-      )}
-
-      {item.comment && (
-        <div className="rounded-xl p-3" style={{ background: subtleBg }}>
-          <p className="text-[14px] leading-relaxed" style={{ color: metaColor }}>
-            {item.comment}
-          </p>
-        </div>
-      )}
-
-      <div
-        className="flex items-start gap-2.5 rounded-xl p-3"
-        style={{ background: subtleBg }}
-      >
-        <Info size={16} color="#8E8E93" className="shrink-0 mt-0.5" />
-        <p className="text-[13px] leading-relaxed" style={{ color: '#8E8E93' }}>
-          Нажмите и удерживайте карточку, чтобы удалить
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -644,9 +555,9 @@ function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => vo
   }
 
   return (
-    <div className="px-4 pb-20 space-y-4">
+    <div className="px-4 pb-20 space-y-3">
       {friendsLists.map((fl) => (
-        <FriendMiniStack
+        <FriendPreviewCard
           key={fl.id}
           wishList={fl}
           dark={darkMode}
@@ -657,9 +568,9 @@ function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => vo
   );
 }
 
-/* ─── Friend Mini Stack (preview card) ─── */
+/* ─── Friend Preview Card ─── */
 
-function FriendMiniStack({
+function FriendPreviewCard({
   wishList,
   dark,
   onPress,
@@ -671,6 +582,7 @@ function FriendMiniStack({
   const cardBg = dark ? '#1C1C1E' : '#ffffff';
   const textColor = dark ? '#F5F5F7' : '#1C1C1E';
   const subtitleColor = '#8E8E93';
+  const borderColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
   const items = wishList.items || [];
   const topItem = items[0];
@@ -686,11 +598,11 @@ function FriendMiniStack({
       className="w-full text-left rounded-2xl overflow-hidden transition-shadow active:scale-[0.98] active:opacity-80"
       style={{
         background: cardBg,
-        border: dark ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.06)',
+        border: `0.5px solid ${borderColor}`,
         boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
       }}
     >
-      {/* Mini card preview area */}
+      {/* Preview area */}
       <div
         className="relative"
         style={{
@@ -727,40 +639,5 @@ function FriendMiniStack({
         <ChevronRight size={18} color="#C7C7CC" className="shrink-0 ml-2" />
       </div>
     </button>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   Dots Indicator
-   ═══════════════════════════════════════════════════════ */
-
-function DotsIndicator({
-  total,
-  current,
-  dark,
-  onDotPress,
-}: {
-  total: number;
-  current: number;
-  dark?: boolean;
-  onDotPress?: (i: number) => void;
-}) {
-  if (total <= 1) return null;
-
-  return (
-    <div className="flex items-center justify-center gap-[6px] py-4">
-      {Array.from({ length: total }).map((_, i) => (
-        <button
-          key={i}
-          onClick={() => onDotPress?.(i)}
-          className="rounded-full transition-colors duration-200"
-          style={{
-            width: 5,
-            height: 5,
-            background: i === current ? '#007AFF' : dark ? '#636366' : '#C7C7CC',
-          }}
-        />
-      ))}
-    </div>
   );
 }
