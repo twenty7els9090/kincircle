@@ -70,7 +70,7 @@ export function ProfileScreen() {
     fetchProfileData();
   }, [fetchProfileData]);
 
-  // Listen for realtime/polling friend updates
+  // Listen for realtime friend updates
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -83,6 +83,20 @@ export function ProfileScreen() {
     window.addEventListener('kinnect:friends-updated', handler);
     return () => window.removeEventListener('kinnect:friends-updated', handler);
   }, []);
+
+  // Listen for realtime group invite updates
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.invites) {
+        setGroupInvites(detail.invites);
+        // Refresh houses in case invite was accepted elsewhere
+        fetchProfileData();
+      }
+    };
+    window.addEventListener('kinnect:group-invites-updated', handler);
+    return () => window.removeEventListener('kinnect:group-invites-updated', handler);
+  }, [fetchProfileData]);
 
   if (!currentUser) return null;
 

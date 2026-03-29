@@ -47,6 +47,31 @@ export function TasksScreen() {
       .catch(() => {});
   }, [currentUser, activeHouse]);
 
+  // Realtime: listen for group invite updates
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.invites) {
+        setGroupInvites(detail.invites);
+        // If accepted an invite, re-fetch houses
+        if (!activeHouse) {
+          authFetch('/api/houses')
+            .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(({ houses: h }) => {
+              const safe = Array.isArray(h) ? h : [];
+              setHouses(safe);
+              if (safe.length > 0 && !useAppStore.getState().activeHouse) {
+                useAppStore.getState().setActiveHouse(safe[0]);
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    };
+    window.addEventListener('kinnect:group-invites-updated', handler);
+    return () => window.removeEventListener('kinnect:group-invites-updated', handler);
+  }, [activeHouse]);
+
   const acceptGroupInvite = (inviteId: string) => {
     authFetch(`/api/group-invites/${inviteId}`, { method: 'PATCH' })
       .then((res) => {

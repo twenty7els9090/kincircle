@@ -71,6 +71,23 @@ export function useRealtime() {
     } catch { /* silent */ }
   }, []);
 
+  const refetchGroupInvites = useCallback(async () => {
+    try {
+      const token = useAppStore.getState().authToken;
+      if (!token) return;
+      const res = await fetch('/api/group-invites?type=incoming', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      window.dispatchEvent(new CustomEvent('kinnect:group-invites-updated', {
+        detail: {
+          invites: Array.isArray(data.invites) ? data.invites : [],
+        },
+      }));
+    } catch { /* silent */ }
+  }, []);
+
   // ─── Step 3: Subscribe to Task changes ───
   useEffect(() => {
     if (!userId || !houseId || !authToken || !supabase) return;
@@ -147,7 +164,47 @@ export function useRealtime() {
     };
   }, [userId, houseId, authToken, refetchTasks]);
 
-  // ─── Step 6: Subscribe to Friendship changes ───
+  // ─── Step 6: Subscribe to GroupInvite changes (incoming) ───
+  useEffect(() => {
+    if (!userId || !authToken || !supabase) return;
+
+    const name1 = `rt:gi-r:${userId}`;
+    const name2 = `rt:gi-s:${userId}`;
+    channelsRef.current.push(name1, name2);
+
+    // Invites where I'm the recipient
+    const ch1 = supabase
+      .channel(name1)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'GroupInvite', filter: `userId=eq.${userId}` },
+        () => { setTimeout(refetchGroupInvites, 200); },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log(`[RT] ${name1}: SUBSCRIBED ✓`);
+        else if (status === 'CHANNEL_ERROR') console.error(`[RT] ${name1}: CHANNEL_ERROR ✗`);
+      });
+
+    // Invites where I'm the inviter (to update sent list in house-settings)
+    const ch2 = supabase
+      .channel(name2)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'GroupInvite', filter: `inviterId=eq.${userId}` },
+        () => { setTimeout(refetchGroupInvites, 200); },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log(`[RT] ${name2}: SUBSCRIBED ✓`);
+        else if (status === 'CHANNEL_ERROR') console.error(`[RT] ${name2}: CHANNEL_ERROR ✗`);
+      });
+
+    return () => {
+      if (supabase) { supabase.removeChannel(ch1); supabase.removeChannel(ch2); }
+      channelsRef.current = channelsRef.current.filter((n) => n !== name1 && n !== name2);
+    };
+  }, [userId, authToken, refetchGroupInvites]);
+
+  // ─── Step 7: Subscribe to Friendship changes ───
   useEffect(() => {
     if (!userId || !authToken || !supabase) return;
 
