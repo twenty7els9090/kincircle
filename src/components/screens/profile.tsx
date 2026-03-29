@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Home, UserPlus, Moon, Sun, LogOut, Search, Trash2, Copy, Check, X, ChevronRight, Plus } from 'lucide-react';
+import { Home, UserPlus, Moon, Sun, LogOut, Search, Trash2, Copy, Check, X, ChevronRight, Plus, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
@@ -24,6 +24,11 @@ export function ProfileScreen() {
   const [friends, setFriends] = useState<(User & { friendshipId: string })[]>([]);
   const [incoming, setIncoming] = useState<{ id: string; user: User }[]>([]);
   const [sent, setSent] = useState<{ id: string; user: User }[]>([]);
+  const [groupInvites, setGroupInvites] = useState<{
+    id: string;
+    house: { id: string; name: string; ownerId: string };
+    inviter: { id: string; displayName: string; username: string | null };
+  }[]>([]);
 
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,19 +45,22 @@ export function ProfileScreen() {
   const fetchProfileData = useCallback(async (signal?: AbortSignal) => {
     if (!userId) return;
     try {
-      const [housesRes, friendsRes] = await Promise.all([
+      const [housesRes, friendsRes, invitesRes] = await Promise.all([
         authFetch('/api/houses', { signal }),
         authFetch('/api/friends', { signal }),
+        authFetch('/api/group-invites?type=incoming', { signal }),
       ]);
       if (signal?.aborted) return;
       if (!housesRes.ok || !friendsRes.ok) throw new Error('Fetch failed');
       const { houses: h } = await housesRes.json();
       const { friends: f, incoming: reqs, sent: sentReqs } = await friendsRes.json();
+      const { invites } = await invitesRes.json();
       if (signal?.aborted) return;
       setHouses(Array.isArray(h) ? h : []);
       setFriends(Array.isArray(f) ? f : []);
       setIncoming(Array.isArray(reqs) ? reqs : []);
       setSent(Array.isArray(sentReqs) ? sentReqs : []);
+      setGroupInvites(Array.isArray(invites) ? invites : []);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
     }
@@ -389,6 +397,61 @@ export function ProfileScreen() {
                   <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#FFF8E1', color: '#B07800' }}>Ожидает</span>
                 </div>
                 {i < sent.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Group invites */}
+      {groupInvites.length > 0 && (
+        <div className="px-4 mb-6">
+          <p className="ios-section-header mb-2 px-1">ПРИГЛАШЕНИЯ В ГРУППЫ · {groupInvites.length}</p>
+          <div className="ios-card">
+            {groupInvites.map((invite, i) => (
+              <div key={invite.id}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(0,122,255,0.12)' }}>
+                    <Users size={16} color="#007AFF" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>
+                      {invite.house.name}
+                    </span>
+                    <span className="text-[12px]" style={{ color: '#8E8E93' }}>
+                      от {invite.inviter.displayName}{invite.inviter.username ? ` @${invite.inviter.username}` : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      authFetch(`/api/group-invites/${invite.id}`, { method: 'DELETE' })
+                        .then(() => setGroupInvites((prev) => prev.filter((g) => g.id !== invite.id)))
+                        .catch(() => {});
+                    }}
+                    className="w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: '#FFF0F0' }}
+                  >
+                    <X size={16} color="#FF3B30" strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      authFetch(`/api/group-invites/${invite.id}`, { method: 'PATCH' })
+                        .then((res) => {
+                          if (res.ok) {
+                            showToast('Вы вступили в группу!');
+                            setGroupInvites((prev) => prev.filter((g) => g.id !== invite.id));
+                            fetchProfileData(); // refresh houses
+                          }
+                        })
+                        .catch(() => {});
+                    }}
+                    className="px-3 py-[6px] rounded-full shrink-0"
+                    style={{ background: '#007AFF' }}
+                  >
+                    <span className="text-white text-[13px] font-semibold">Вступить</span>
+                  </button>
+                </div>
+                {i < groupInvites.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
               </div>
             ))}
           </div>

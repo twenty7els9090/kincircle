@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, X, Clock, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
@@ -12,6 +12,14 @@ const ROLE_LABELS: Record<string, string> = {
   owner: 'админ',
   member: 'участник',
 };
+
+interface PendingInvite {
+  id: string;
+  userId: string;
+  status: string;
+  createdAt: string;
+  recipient: { id: string; displayName: string; username: string | null };
+}
 
 export function HouseSettingsScreen() {
   const {
@@ -25,6 +33,7 @@ export function HouseSettingsScreen() {
 
   const [members, setMembers] = useState<{ id: string; userId: string; role: string; user: User }[]>([]);
   const [friends, setFriends] = useState<User[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [houseName, setHouseName] = useState('');
@@ -32,6 +41,7 @@ export function HouseSettingsScreen() {
   const [showLeave, setShowLeave] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
+  const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
 
   const isOwner = currentUser?.id === activeHouse?.ownerId;
 
@@ -62,32 +72,57 @@ export function HouseSettingsScreen() {
     }
   }, [currentUser]);
 
+  const fetchPendingInvites = useCallback(async () => {
+    if (!currentUser || !activeHouse) return;
+    try {
+      const res = await authFetch(`/api/group-invites?houseId=${activeHouse.id}`);
+      if (!res.ok) return;
+      const { invites } = await res.json();
+      setPendingInvites(Array.isArray(invites) ? invites : []);
+    } catch {
+      setPendingInvites([]);
+    }
+  }, [currentUser, activeHouse]);
+
   useEffect(() => {
     fetchMembers();
     fetchFriends();
-  }, [fetchMembers, fetchFriends]);
+    fetchPendingInvites();
+  }, [fetchMembers, fetchFriends, fetchPendingInvites]);
 
   useEffect(() => {
     if (activeHouse) setHouseName(activeHouse.name);
   }, [activeHouse]);
 
-  const addMember = async (userId: string) => {
+  const inviteFriend = async (userId: string) => {
     if (!currentUser || !activeHouse) return;
+    setInvitingUserId(userId);
     try {
-      const res = await authFetch(`/api/houses/${activeHouse.id}/members`, {
+      const res = await authFetch('/api/group-invites', {
         method: 'POST',
-        body: JSON.stringify({ targetUserId: userId }),
+        body: JSON.stringify({ houseId: activeHouse.id, targetUserId: userId }),
       });
       if (res.ok) {
-        showToast('Участник добавлен!');
-        fetchMembers();
+        showToast('Приглашение отправлено!');
+        fetchPendingInvites();
         setShowAddMember(false);
       } else {
         const data = await res.json();
-        showToast(data.error || 'Не удалось добавить');
+        showToast(data.error === 'Already a member' ? 'Уже в группе' : data.error === 'Invite already sent' ? 'Приглашение уже отправлено' : 'Не удалось отправить');
       }
     } catch {
-      showToast('Не удалось добавить участника');
+      showToast('Не удалось отправить приглашение');
+    }
+    setInvitingUserId(null);
+  };
+
+  const cancelInvite = async (inviteId: string) => {
+    try {
+      await authFetch(`/api/group-invites/${inviteId}`, { method: 'DELETE' });
+      setPendingInvites((prev) => prev.filter((inv) => inv.id !== inviteId));
+      showToast('Приглашение отменено');
+    } catch {
+      showToast('Не удалось отменить');
     }
   };
 
@@ -228,13 +263,48 @@ export function HouseSettingsScreen() {
           </div>
         </div>
 
+        {/* Pending invites */}
+        {pendingInvites.length > 0 && (
+          <div className="mb-6">
+            <p className="ios-section-header mb-2 px-1">ОЖИДАЮТ ПРИГЛАШЕНИЯ ({pendingInvites.length})</p>
+            <div className="ios-card">
+              {pendingInvites.map((invite, i) => (
+                <div key={invite.id}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <AvatarCircle userId={invite.recipient.id} displayName={invite.recipient.displayName} size={36} fontSize={12} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>
+                        {invite.recipient.displayName}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Clock size={11} color="#B07800" strokeWidth={2} />
+                        <span className="text-[12px]" style={{ color: '#B07800' }}>Ожидает ответа</span>
+                      </div>
+                    </div>
+                    {isOwner && (
+                      <button
+                        onClick={() => cancelInvite(invite.id)}
+                        className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: 'var(--ios-toggle-bg)' }}
+                      >
+                        <X size={14} color="#8E8E93" strokeWidth={2.5} />
+                      </button>
+                    )}
+                  </div>
+                  {i < pendingInvites.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Members */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2 px-1">
             <p className="ios-section-header">УЧАСТНИКИ ({members.length})</p>
             {isOwner && (
               <button onClick={() => setShowAddMember(true)} className="text-[12px] font-semibold" style={{ color: '#007AFF' }}>
-                Добавить из друзей
+                Пригласить из друзей
               </button>
             )}
           </div>
@@ -309,11 +379,11 @@ export function HouseSettingsScreen() {
         </div>
       </div>
 
-      {/* Add member */}
+      {/* Add member — now sends invite */}
       <BottomSheet
         open={showAddMember}
         onClose={() => setShowAddMember(false)}
-        title="ДОБАВИТЬ УЧАСТНИКА"
+        title="ПРИГЛАСИТЬ В ГРУППУ"
       >
         <div className="px-4 pb-8">
           {availableFriends.length === 0 ? (
@@ -324,14 +394,21 @@ export function HouseSettingsScreen() {
             availableFriends.map((friend) => (
               <button
                 key={friend.id}
-                onClick={() => addMember(friend.id)}
+                onClick={() => inviteFriend(friend.id)}
+                disabled={invitingUserId === friend.id}
                 className="w-full flex items-center gap-3 py-3 border-b"
-                style={{ borderBottomColor: 'rgba(0,0,0,0.06)', borderBottomWidth: 0.5 }}
+                style={{ borderBottomColor: 'rgba(0,0,0,0.06)', borderBottomWidth: 0.5, opacity: invitingUserId === friend.id ? 0.5 : 1 }}
               >
                 <AvatarCircle userId={friend.id} displayName={friend.displayName} size={36} fontSize={12} />
-                <div className="flex flex-col items-start">
+                <div className="flex flex-col items-start flex-1">
                   <span className="text-[15px] font-medium" style={{ color: 'var(--ios-text-primary)' }}>{friend.displayName}</span>
                   {friend.username && <span className="ios-meta">@{friend.username}</span>}
+                </div>
+                <div className="flex items-center gap-1 px-3 py-[6px] rounded-full" style={{ background: '#007AFF' }}>
+                  <Users size={14} color="white" strokeWidth={2} />
+                  <span className="text-[13px] font-semibold" style={{ color: '#fff' }}>
+                    {invitingUserId === friend.id ? 'Отправка...' : 'Пригласить'}
+                  </span>
                 </div>
               </button>
             ))

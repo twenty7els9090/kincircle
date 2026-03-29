@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, ChevronDown, ShoppingCart, Sparkles, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, ChevronDown, ShoppingCart, Sparkles, Trash2, RotateCcw, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
@@ -27,11 +27,53 @@ export function TasksScreen() {
   const [houseSwitcherOpen, setHouseSwitcherOpen] = useState(false);
   const [houses, setHouses] = useState<(House & { memberRole: string; memberCount: number })[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [groupInvites, setGroupInvites] = useState<{
+    id: string;
+    house: { id: string; name: string; ownerId: string };
+    inviter: { id: string; displayName: string; username: string | null };
+  }[]>([]);
 
   const memberCount = useMemo(() => {
     const h = houses.find((x) => x.id === activeHouse?.id);
     return h?.memberCount || 0;
   }, [houses, activeHouse]);
+
+  // Fetch group invites when no house
+  useEffect(() => {
+    if (!currentUser || activeHouse) return;
+    authFetch('/api/group-invites?type=incoming')
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(({ invites }) => setGroupInvites(Array.isArray(invites) ? invites : []))
+      .catch(() => {});
+  }, [currentUser, activeHouse]);
+
+  const acceptGroupInvite = (inviteId: string) => {
+    authFetch(`/api/group-invites/${inviteId}`, { method: 'PATCH' })
+      .then((res) => {
+        if (res.ok) {
+          showToast('Вы вступили в группу!');
+          setGroupInvites((prev) => prev.filter((g) => g.id !== inviteId));
+          // Re-fetch houses to auto-select the new one
+          authFetch('/api/houses')
+            .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(({ houses: h }) => {
+              const safe = Array.isArray(h) ? h : [];
+              setHouses(safe);
+              if (safe.length > 0 && !useAppStore.getState().activeHouse) {
+                useAppStore.getState().setActiveHouse(safe[0]);
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  };
+
+  const declineGroupInvite = (inviteId: string) => {
+    authFetch(`/api/group-invites/${inviteId}`, { method: 'DELETE' })
+      .then(() => setGroupInvites((prev) => prev.filter((g) => g.id !== inviteId)))
+      .catch(() => {});
+  };
 
   // Fetch houses silently
   useEffect(() => {
@@ -119,6 +161,48 @@ export function TasksScreen() {
         <div className="shrink-0 px-4 pt-[60px] pb-2">
           <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Задачи</h1>
         </div>
+
+        {/* Pending group invites */}
+        {groupInvites.length > 0 && (
+          <div className="px-4 mt-4">
+            <p className="ios-section-header mb-2 px-1">ПРИГЛАШЕНИЯ В ГРУППЫ</p>
+            <div className="ios-card">
+              {groupInvites.map((invite, i) => (
+                <div key={invite.id}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(0,122,255,0.12)' }}>
+                      <Users size={16} color="#007AFF" strokeWidth={2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>
+                        {invite.house.name}
+                      </span>
+                      <span className="text-[12px]" style={{ color: '#8E8E93' }}>
+                        от {invite.inviter.displayName}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => declineGroupInvite(invite.id)}
+                      className="w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: '#FFF0F0' }}
+                    >
+                      <Trash2 size={14} color="#FF3B30" strokeWidth={2} />
+                    </button>
+                    <button
+                      onClick={() => acceptGroupInvite(invite.id)}
+                      className="px-3 py-[6px] rounded-full shrink-0"
+                      style={{ background: '#007AFF' }}
+                    >
+                      <span className="text-white text-[13px] font-semibold">Вступить</span>
+                    </button>
+                  </div>
+                  {i < groupInvites.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 flex flex-col items-center justify-center px-8">
           <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center mb-4" style={{ background: 'var(--ios-toggle-bg)' }}>
             <ShoppingCart size={28} color="#8E8E93" strokeWidth={1.5} />

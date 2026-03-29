@@ -18,11 +18,13 @@ model User {
 
   friendshipsInitiated  Friendship[]  @relation("FriendshipInitiator")
   friendshipsReceived   Friendship[]  @relation("FriendshipRecipient")
-  housesOwned           House[]       @relation("HouseOwner")
+  housesOwned           House[]         @relation("HouseOwner")
   houseMemberships      HouseMember[]
-  tasksCreated          Task[]        @relation("TaskCreator")
-  tasksCompleted        Task[]        @relation("TaskCompleter")
+  tasksCreated          Task[]           @relation("TaskCreator")
+  tasksCompleted        Task[]           @relation("TaskCompleter")
   taskAssignments       TaskAssignee[]
+  groupInvitesSent      GroupInvite[]    @relation("InviteSender")
+  groupInvitesReceived  GroupInvite[]    @relation("InviteRecipient")
 
   @@map("User")
 }
@@ -54,6 +56,7 @@ model House {
   owner   User          @relation("HouseOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members HouseMember[]
   tasks   Task[]
+  invites GroupInvite[]
 
   @@index([ownerId])
   @@map("House")
@@ -116,4 +119,22 @@ model TaskAssignee {
   @@index([userId])
   @@index([taskId, userId])
   @@map("TaskAssignee")
+}
+
+model GroupInvite {
+  id        String   @id @default(cuid())
+  houseId   String
+  inviterId String
+  userId    String
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("createdAt")
+
+  house     House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  inviter   User  @relation("InviteSender", fields: [inviterId], references: [id], onDelete: Cascade)
+  recipient User  @relation("InviteRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([houseId, userId, status])
+  @@index([userId, status])
+  @@index([houseId, status])
+  @@map("GroupInvite")
 }
