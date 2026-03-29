@@ -151,7 +151,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
   return (
     <div className="relative">
       {/* ─── Header: always visible ─── */}
-      <div className="relative px-4 pb-2" style={{ paddingTop: 'max(68px, env(safe-area-inset-top, 68px))' }}>
+      <div className="relative px-4 pb-2" style={{ paddingTop: 'max(73px, env(safe-area-inset-top, 73px))' }}>
         {/* First row: title + friends button */}
         <div className="flex items-start justify-between gap-3">
           {/* Animated title */}
