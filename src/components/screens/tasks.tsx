@@ -305,7 +305,7 @@ export function TasksScreen() {
               <div className="space-y-3 mb-6">
                 <p className="ios-section-header mb-1 px-1">АКТИВНЫЕ · {activeTasks.length}</p>
                 {activeTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} currentUserId={currentUser?.id || ''} onToggle={() => toggleTask(task)} dark={darkMode} />
+                  <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task)} dark={darkMode} />
                 ))}
               </div>
             )}
@@ -320,7 +320,7 @@ export function TasksScreen() {
                   </button>
                 </div>
                 {doneTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} currentUserId={currentUser?.id || ''} onToggle={() => toggleTask(task)} onDelete={() => deleteTask(task)} dark={darkMode} />
+                  <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task)} onDelete={() => deleteTask(task)} dark={darkMode} />
                 ))}
               </div>
             )}
@@ -379,7 +379,7 @@ function formatDueDate(dateStr: string): string {
   return `${parseInt(parts[2], 10)} ${months[parseInt(parts[1], 10)] || parts[1]}`;
 }
 
-function TaskCard({ task, currentUserId, onToggle, onDelete, dark }: { task: Task; currentUserId: string; onToggle: () => void; onDelete?: () => void; dark?: boolean }) {
+function TaskCard({ task, onToggle, onDelete, dark }: { task: Task; onToggle: () => void; onDelete?: () => void; dark?: boolean }) {
   const assignees = task.assignees || [];
   const hasAssignees = assignees.length > 0;
 

@@ -9,8 +9,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const type = request.nextUrl.searchParams.get('type'); // 'incoming' | 'sent' | 'all'
+    const houseId = request.nextUrl.searchParams.get('houseId'); // optional: filter by house
 
     const where: Record<string, unknown> = {};
+
+    if (houseId) {
+      where.houseId = houseId;
+    }
 
     if (type === 'incoming') {
       where.userId = user.userId;
@@ -20,10 +25,15 @@ export async function GET(request: NextRequest) {
       where.status = 'pending';
     } else {
       // all — both incoming and sent
-      where.OR = [
-        { userId: user.userId, status: 'pending' },
-        { inviterId: user.userId, status: 'pending' },
-      ];
+      const conditions: Record<string, unknown>[] = [];
+      if (houseId) {
+        conditions.push({ houseId, userId: user.userId, status: 'pending' });
+        conditions.push({ houseId, inviterId: user.userId, status: 'pending' });
+      } else {
+        conditions.push({ userId: user.userId, status: 'pending' });
+        conditions.push({ inviterId: user.userId, status: 'pending' });
+      }
+      where.OR = conditions;
     }
 
     const invites = await db.groupInvite.findMany({

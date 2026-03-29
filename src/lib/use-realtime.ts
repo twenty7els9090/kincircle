@@ -151,7 +151,11 @@ export function useRealtime() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'HouseMember', filter: `houseId=eq.${houseId}` },
-        () => { setTimeout(refetchTasks, 200); },
+        () => {
+          setTimeout(refetchTasks, 200);
+          // Notify house-settings to refresh member list
+          window.dispatchEvent(new CustomEvent('kinnect:house-members-changed'));
+        },
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') console.log(`[RT] ${name}: SUBSCRIBED ✓`);

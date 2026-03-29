@@ -37,15 +37,18 @@ export function CreateTaskScreen() {
   useEffect(() => { setCategory(activeCategory); }, [activeCategory]);
 
   useEffect(() => {
-    if (!currentUser) return;
-    authFetch(`/api/friends`)
+    if (!currentUser || !activeHouse) return;
+    authFetch(`/api/houses/${activeHouse.id}/members`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(({ friends }) => setMembers(Array.isArray(friends) ? friends : []))
+      .then(({ members }) => setMembers(Array.isArray(members) ? members.map((m: { user: User }) => m.user).filter(Boolean) : []))
       .catch(() => {});
-  }, [currentUser]);
+  }, [currentUser, activeHouse]);
 
   const handleCreate = async () => {
-    if (!title.trim() || !currentUser || !activeHouse) return;
+    if (!title.trim() || !currentUser || !activeHouse) {
+      if (!activeHouse) showToast('Нет активной группы');
+      return;
+    }
     setLoading(true);
     try {
       const res = await authFetch('/api/tasks', {
@@ -158,7 +161,7 @@ export function CreateTaskScreen() {
       <BottomSheet open={showAssignPicker} onClose={() => setShowAssignPicker(false)} title="НАЗНАЧИТЬ КОМУ-ЛИБО">
         <div className="px-4 pb-8">
           {otherMembers.length === 0 ? (
-            <p className="text-center ios-meta py-8">У вас пока нет друзей</p>
+            <p className="text-center ios-meta py-8">Нет других участников в группе</p>
           ) : (
             otherMembers.map((member) => {
               const isSelected = assignedTo.includes(member.id);

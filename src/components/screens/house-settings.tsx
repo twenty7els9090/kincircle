@@ -94,6 +94,18 @@ export function HouseSettingsScreen() {
     if (activeHouse) setHouseName(activeHouse.name);
   }, [activeHouse]);
 
+  // Realtime: listen for HouseMember changes (invite accepted → new member)
+  useEffect(() => {
+    if (!activeHouse) return;
+    const handler = () => {
+      fetchMembers();
+      fetchFriends();
+      fetchPendingInvites();
+    };
+    window.addEventListener('kinnect:house-members-changed', handler);
+    return () => window.removeEventListener('kinnect:house-members-changed', handler);
+  }, [activeHouse, fetchMembers, fetchFriends, fetchPendingInvites]);
+
   const inviteFriend = async (userId: string) => {
     if (!currentUser || !activeHouse) return;
     setInvitingUserId(userId);

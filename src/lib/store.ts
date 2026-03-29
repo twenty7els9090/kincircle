@@ -24,8 +24,6 @@ interface AppState {
   setActiveCategory: (cat: TaskCategory) => void;
   tasks: Task[];
   setTasks: (tasks: Task[]) => void;
-  houseMembers: { id: string; userId: string; role: string; user: User }[];
-  setHouseMembers: (members: { id: string; userId: string; role: string; user: User }[]) => void;
 
   // Theme
   darkMode: boolean;
@@ -69,8 +67,6 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveCategory: (cat) => set({ activeCategory: cat }),
   tasks: [] as Task[],
   setTasks: (tasks) => set({ tasks: Array.isArray(tasks) ? tasks : [] }),
-  houseMembers: [],
-  setHouseMembers: (members) => set({ houseMembers: members }),
 
   // Theme
   darkMode: false,

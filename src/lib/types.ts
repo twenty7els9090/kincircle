@@ -7,16 +7,6 @@ export interface User {
   createdAt: string;
 }
 
-export interface Friendship {
-  id: string;
-  userId: string;
-  friendId: string;
-  status: 'pending' | 'accepted';
-  createdAt: string;
-  initiator?: User;
-  recipient?: User;
-}
-
 export interface House {
   id: string;
   name: string;
