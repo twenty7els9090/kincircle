@@ -57,7 +57,7 @@ function formatPrice(raw: string | null): string | null {
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 440;
+const CARD_HEIGHT = 500;
 const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════
@@ -151,30 +151,43 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
   return (
     <div className="relative">
       {/* ─── Header: always visible ─── */}
-      <div className="relative px-4 pb-2" style={{ paddingTop: 'max(73px, env(safe-area-inset-top, 73px))' }}>
+      <div className="relative px-4 pb-2" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
         {/* First row: title + friends button */}
         <div className="flex items-start justify-between gap-3">
           {/* Animated title */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-            className="text-[29px] font-semibold leading-[1.2] tracking-[-0.01em] min-w-0"
+            transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+            className="text-[34px] font-semibold leading-[1.15] tracking-[-0.01em] min-w-0"
             style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
           >
-            <p>Все!</p>
-            <p>Чего,</p>
-            <div className="flex items-center gap-2">
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
+            >Все!</motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            >Чего,</motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+              className="flex items-center gap-2"
+            >
               <p>Хочу я...</p>
               <button
                 onClick={() => setShowAddSheet(true)}
                 className="rounded-full flex items-center gap-1.5 active:scale-90 transition-transform shrink-0 pl-2.5 pr-4 py-2"
                 style={{ background: '#FF2D55' }}
               >
-                <Heart size={16} color="white" fill="white" strokeWidth={0} />
+                <Heart size={17} color="white" fill="white" strokeWidth={0} />
                 <span className="font-semibold text-white text-[15px]">добавить</span>
               </button>
-            </div>
+            </motion.div>
           </motion.div>
 
           {/* Friends button — top right, aligned with text */}

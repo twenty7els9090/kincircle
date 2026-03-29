@@ -185,7 +185,7 @@ export function TasksScreen() {
   if (!activeHouse) {
     return (
       <div className="flex flex-col" style={{ background: 'var(--ios-bg)', height: '100vh' }}>
-        <div className="shrink-0 px-4 pb-2" style={{ paddingTop: 'max(73px, env(safe-area-inset-top, 73px))' }}>
+        <div className="shrink-0 px-4 pb-2" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
           <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Задачи</h1>
         </div>
 
@@ -256,7 +256,7 @@ export function TasksScreen() {
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', height: '100vh', overflow: 'hidden' }}>
       {/* Header */}
-      <div className="shrink-0 px-4 pt-[60px] pb-2" style={{ paddingTop: 'max(73px, env(safe-area-inset-top, 73px))' }}>
+      <div className="shrink-0 px-4 pt-[60px] pb-2" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
         <div className="flex items-center justify-between">
           <button onClick={() => setHouseSwitcherOpen(true)} className="flex items-center gap-2">
             <div>

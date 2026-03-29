@@ -233,7 +233,7 @@ export function ProfileScreen() {
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh', paddingBottom: 80 }}>
       {/* Header */}
-      <div className="px-4 pb-4" style={{ paddingTop: 'max(73px, env(safe-area-inset-top, 73px))' }}>
+      <div className="px-4 pb-4" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
         <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Профиль</h1>
       </div>
 
