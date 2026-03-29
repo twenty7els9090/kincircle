@@ -168,24 +168,20 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+            className="text-[32px] font-semibold leading-[1.2] tracking-[-0.02em]"
+            style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
           >
-            <p className="text-[26px] font-semibold leading-[1.25]" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
-              Все!
-            </p>
-            <p className="text-[26px] font-semibold leading-[1.25]" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
-              Чего,
-            </p>
+            <p>Все!</p>
+            <p>Чего,</p>
             <div className="flex items-center gap-2">
-              <p className="text-[26px] font-semibold leading-[1.25]" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
-                Хочу я...
-              </p>
+              <p>Хочу я...</p>
               <button
                 onClick={() => setShowAddSheet(true)}
-                className="rounded-full flex items-center gap-1.5 active:scale-90 transition-transform shrink-0 pl-2.5 pr-4 py-1.5"
+                className="rounded-full flex items-center gap-1.5 active:scale-90 transition-transform shrink-0 pl-2.5 pr-4 py-2"
                 style={{ background: '#FF2D55' }}
               >
                 <Heart size={16} color="white" fill="white" strokeWidth={0} />
-                <span className="font-semibold text-white text-[14px]">добавить</span>
+                <span className="font-semibold text-white text-[15px]">добавить</span>
               </button>
             </div>
           </motion.div>
