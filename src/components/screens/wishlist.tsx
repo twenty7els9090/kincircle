@@ -151,24 +151,15 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
   return (
     <div className="relative">
       {/* ─── Header: always visible ─── */}
-      <div className="relative px-4 pt-[50px] pb-2">
-        {/* Friends button — top right */}
-        <button
-          onClick={onOpenFriends}
-          className="absolute top-[50px] right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full active:opacity-70 transition-opacity z-10"
-          style={{ background: 'var(--ios-toggle-bg)' }}
-        >
-          <Users size={15} style={{ color: 'var(--ios-text-secondary)' }} />
-          <span className="text-[12px] font-medium" style={{ color: 'var(--ios-text-secondary)' }}>Друзья</span>
-        </button>
-
-        {/* Animated title */}
-        <div className="pr-[90px]">
+      <div className="relative px-4 pb-2" style={{ paddingTop: 'max(68px, env(safe-area-inset-top, 68px))' }}>
+        {/* First row: title + friends button */}
+        <div className="flex items-start justify-between gap-3">
+          {/* Animated title */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-            className="text-[29px] font-semibold leading-[1.2] tracking-[-0.01em]"
+            className="text-[29px] font-semibold leading-[1.2] tracking-[-0.01em] min-w-0"
             style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
           >
             <p>Все!</p>
@@ -185,6 +176,16 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
               </button>
             </div>
           </motion.div>
+
+          {/* Friends button — top right, aligned with text */}
+          <button
+            onClick={onOpenFriends}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full active:opacity-70 transition-opacity shrink-0 mt-1"
+            style={{ background: 'var(--ios-toggle-bg)' }}
+          >
+            <Users size={15} style={{ color: 'var(--ios-text-secondary)' }} />
+            <span className="text-[12px] font-medium" style={{ color: 'var(--ios-text-secondary)' }}>Друзья</span>
+          </button>
         </div>
 
         {/* Subtitle only when empty */}

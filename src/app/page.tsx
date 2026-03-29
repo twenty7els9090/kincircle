@@ -87,9 +87,10 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const themeInitialized = useRef(false);
 
-  // ─── Sync darkMode store → DOM + Telegram header ───
+  // ─── Sync darkMode store → DOM + localStorage + Telegram ───
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('kinnect_dark_mode', darkMode ? '1' : '0');
 
     const tg = window.Telegram?.WebApp;
     if (tg) {
@@ -100,19 +101,22 @@ export default function Home() {
     }
   }, [darkMode]);
 
-  // ─── Detect Telegram theme ONCE on mount ───
+  // ─── Restore theme: localStorage first, then Telegram only if first visit ───
   useEffect(() => {
     if (themeInitialized.current) return;
     themeInitialized.current = true;
 
-    const tg = window.Telegram?.WebApp;
-    if (tg?.colorScheme) {
-      const isDark = tg.colorScheme === 'dark';
-      setDarkMode(isDark);
+    const saved = localStorage.getItem('kinnect_dark_mode');
+    if (saved !== null) {
+      // User already chose — respect their choice
+      setDarkMode(saved === '1');
+    } else {
+      // First visit — use Telegram theme as default
+      const tg = window.Telegram?.WebApp;
+      if (tg?.colorScheme === 'dark') {
+        setDarkMode(true);
+      }
     }
-    // Note: we do NOT listen for themeChanged events.
-    // The user can manually toggle dark mode in profile,
-    // and that choice should not be overridden by Telegram.
   }, [setDarkMode]);
 
   // ─── Restore session: user ID from localStorage, JWT from API ───
