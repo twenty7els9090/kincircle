@@ -9,7 +9,7 @@ import { ConfirmationDialog } from '@/components/shared/confirmation-dialog';
 import type { User } from '@/lib/types';
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: 'владелец',
+  owner: 'админ',
   member: 'участник',
 };
 
@@ -137,7 +137,7 @@ export function HouseSettingsScreen() {
       });
       if (res.ok) {
         setActiveHouse(null);
-        showToast('Дом удалён');
+        showToast('Группа удалена');
         setShowDelete(false);
         setScreen('tasks');
       }
@@ -158,7 +158,7 @@ export function HouseSettingsScreen() {
       });
       if (res.ok) {
         setActiveHouse(null);
-        showToast('Вы покинули дом');
+        showToast('Вы покинули группу');
         setShowLeave(false);
         setScreen('tasks');
       } else {
@@ -166,7 +166,7 @@ export function HouseSettingsScreen() {
         showToast(data.error || 'Не удалось покинуть');
       }
     } catch {
-      showToast('Не удалось покинуть дом');
+      showToast('Не удалось покинуть');
     } finally {
       setLoading(false);
     }
@@ -188,14 +188,14 @@ export function HouseSettingsScreen() {
           <ChevronLeft size={22} color="#007AFF" />
           <span className="text-[15px]" style={{ color: '#007AFF' }}>Назад</span>
         </button>
-        <span className="ios-nav-title">Настройки дома</span>
+        <span className="ios-nav-title">Настройки группы</span>
         <div className="w-[60px]" />
       </div>
 
       <div className="flex-1 px-4">
         {/* House name */}
         <div className="mb-6">
-          <p className="ios-section-header mb-2 px-1">НАЗВАНИЕ ДОМА</p>
+          <p className="ios-section-header mb-2 px-1">НАЗВАНИЕ ГРУППЫ</p>
           <div className="ios-card p-4">
             {editingName && isOwner ? (
               <div className="flex items-center gap-2">
@@ -299,11 +299,11 @@ export function HouseSettingsScreen() {
         <div className="mb-8">
           {isOwner ? (
             <button onClick={() => setShowDelete(true)} className="ios-danger-btn" disabled={loading}>
-              Удалить дом
+              Удалить группу
             </button>
           ) : (
             <button onClick={() => setShowLeave(true)} className="ios-danger-btn" disabled={loading}>
-              Покинуть дом
+              Покинуть группу
             </button>
           )}
         </div>
@@ -342,8 +342,8 @@ export function HouseSettingsScreen() {
       {/* Delete confirmation */}
       <ConfirmationDialog
         open={showDelete}
-        title="Удалить дом"
-        message="Это навсегда удалит дом и все его задачи. Это действие нельзя отменить."
+        title="Удалить группу"
+        message="Это навсегда удалит группу и все её задачи. Это действие нельзя отменить."
         confirmLabel="Удалить"
         destructive
         onConfirm={deleteHouse}
@@ -353,8 +353,8 @@ export function HouseSettingsScreen() {
       {/* Leave confirmation */}
       <ConfirmationDialog
         open={showLeave}
-        title="Покинуть дом"
-        message="Вы уверены, что хотите покинуть этот дом? Владелец сможет добавить вас снова."
+        title="Покинуть группу"
+        message="Вы уверены, что хотите покинуть эту группу? Создатель сможет добавить вас снова."
         confirmLabel="Покинуть"
         destructive
         onConfirm={leaveHouse}

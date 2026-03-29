@@ -197,7 +197,7 @@ export function ProfileScreen() {
         setHouses((prev) => [...prev, { ...house, memberRole: 'owner', memberCount: 1 }]);
         setNewHouseName('');
         setShowCreateHouse(false);
-        showToast('Дом создан!');
+        showToast('Группа создана!');
       } else {
         const data = await res.json();
         showToast(data.error || 'Не удалось создать');
@@ -395,10 +395,10 @@ export function ProfileScreen() {
         </div>
       )}
 
-      {/* My houses */}
+      {/* My groups */}
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-2 px-1">
-          <p className="ios-section-header">МОИ ДОМА</p>
+          <p className="ios-section-header">МОИ ГРУППЫ</p>
           <button onClick={() => setShowCreateHouse(true)} className="text-[12px] font-semibold" style={{ color: '#007AFF' }}>
             <span className="flex items-center gap-1"><Plus size={14} /> Создать</span>
           </button>
@@ -436,7 +436,7 @@ export function ProfileScreen() {
           ))}
           {houses.length === 0 && (
             <div className="px-4 py-4 text-center">
-              <p className="ios-meta">Пока нет домов</p>
+              <p className="ios-meta">Пока нет групп</p>
             </div>
           )}
         </div>
@@ -518,14 +518,14 @@ export function ProfileScreen() {
       </div>
 
       {/* Create house */}
-      <BottomSheet open={showCreateHouse} onClose={() => setShowCreateHouse(false)} title="СОЗДАТЬ ДОМ">
+      <BottomSheet open={showCreateHouse} onClose={() => setShowCreateHouse(false)} title="СОЗДАТЬ ГРУППУ">
         <div className="px-4 pb-8">
           <div className="mb-4">
-            <p className="text-[13px] mb-2" style={{ color: '#8E8E93' }}>Название дома</p>
+            <p className="text-[13px] mb-2" style={{ color: '#8E8E93' }}>Название группы</p>
             <input
               type="text"
               className="ios-input"
-              placeholder="Например: Мой дом"
+              placeholder="Например: Семья"
               value={newHouseName}
               onChange={(e) => setNewHouseName(e.target.value)}
               autoFocus
@@ -537,7 +537,7 @@ export function ProfileScreen() {
             className="ios-primary-btn"
             style={{ opacity: newHouseName.trim() && !creatingHouse ? 1 : 0.5 }}
           >
-            {creatingHouse ? 'Создание...' : 'Создать дом'}
+            {creatingHouse ? 'Создание...' : 'Создать группу'}
           </button>
         </div>
       </BottomSheet>

@@ -14,7 +14,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: 'владелец',
+  owner: 'админ',
   member: 'участник',
 };
 
@@ -27,14 +27,13 @@ export function TasksScreen() {
   const [houseSwitcherOpen, setHouseSwitcherOpen] = useState(false);
   const [houses, setHouses] = useState<(House & { memberRole: string; memberCount: number })[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const memberCount = useMemo(() => {
     const h = houses.find((x) => x.id === activeHouse?.id);
     return h?.memberCount || 0;
   }, [houses, activeHouse]);
 
-  // Fetch houses silently — no auto-create
+  // Fetch houses silently
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
@@ -73,7 +72,7 @@ export function TasksScreen() {
     setHouseSwitcherOpen(false);
   };
 
-  // OPTIMISTIC toggle with realtime guard
+  // OPTIMISTIC toggle
   const toggleTask = (task: Task) => {
     const snapshot = [...tasks];
     const nextIsDone = !task.isDone;
@@ -113,6 +112,31 @@ export function TasksScreen() {
       });
   };
 
+  // ─── No group state ───
+  if (!activeHouse) {
+    return (
+      <div className="flex flex-col" style={{ background: 'var(--ios-bg)', height: '100vh' }}>
+        <div className="shrink-0 px-4 pt-[60px] pb-2">
+          <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Задачи</h1>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-8">
+          <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center mb-4" style={{ background: 'var(--ios-toggle-bg)' }}>
+            <ShoppingCart size={28} color="#8E8E93" strokeWidth={1.5} />
+          </div>
+          <p className="text-[15px] font-medium text-center mb-2" style={{ color: 'var(--ios-text-primary)' }}>Нет группы</p>
+          <p className="ios-meta text-center mb-6">Создайте или вступите в группу в профиле, чтобы управлять задачами</p>
+          <button
+            onClick={() => pushScreen('profile')}
+            className="px-6 py-3 rounded-full text-[15px] font-semibold"
+            style={{ background: '#007AFF', color: '#fff' }}
+          >
+            Открыть профиль
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   const filteredTasks = safeTasks.filter((t) => t.category === activeCategory);
   const activeTasks = filteredTasks.filter((t) => !t.isDone);
@@ -123,23 +147,17 @@ export function TasksScreen() {
       {/* Header */}
       <div className="shrink-0 px-4 pt-[60px] pb-2">
         <div className="flex items-center justify-between">
-          {activeHouse ? (
-            <button onClick={() => setHouseSwitcherOpen(true)} className="flex items-center gap-2">
-              <div>
-                <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>
-                  {activeHouse.name}
-                </h1>
-                <p className="ios-meta">
-                  {memberCount} {memberCount === 1 ? 'участник' : memberCount < 5 ? 'участника' : 'участников'}
-                </p>
-              </div>
-              {houses.length >= 1 && <ChevronDown size={18} color="#8E8E93" className="ml-1 mt-[-16px]" />}
-            </button>
-          ) : (
+          <button onClick={() => setHouseSwitcherOpen(true)} className="flex items-center gap-2">
             <div>
-              <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Задачи</h1>
+              <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>
+                {activeHouse.name}
+              </h1>
+              <p className="ios-meta">
+                {memberCount} {memberCount === 1 ? 'участник' : memberCount < 5 ? 'участника' : 'участников'}
+              </p>
             </div>
-          )}
+            {houses.length >= 1 && <ChevronDown size={18} color="#8E8E93" className="ml-1 mt-[-16px]" />}
+          </button>
           <button
             onClick={() => pushScreen('create-task')}
             className="flex items-center gap-1 px-3 py-2 rounded-full"
@@ -163,13 +181,7 @@ export function TasksScreen() {
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto px-4 pb-20">
-        {isLoading ? (
-          <div className="space-y-3 py-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl h-[120px]" style={{ background: 'var(--ios-card-bg)', opacity: 0.5 }} />
-            ))}
-          </div>
-        ) : activeTasks.length === 0 && doneTasks.length === 0 ? (
+        {activeTasks.length === 0 && doneTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center mb-4" style={{ background: 'var(--ios-toggle-bg)' }}>
               {activeCategory === 'shopping'
@@ -231,8 +243,8 @@ export function TasksScreen() {
         </div>
       )}
 
-      {/* House switcher */}
-      <BottomSheet open={houseSwitcherOpen} onClose={() => setHouseSwitcherOpen(false)} title="ВЫБРАТЬ ДОМ">
+      {/* Group switcher */}
+      <BottomSheet open={houseSwitcherOpen} onClose={() => setHouseSwitcherOpen(false)} title="ВЫБРАТЬ ГРУППУ">
         <div className="px-4 pb-8">
           {houses.map((house) => (
             <button key={house.id} onClick={() => switchHouse(house)} className="w-full flex items-center justify-between py-3 border-b" style={{ borderBottomColor: 'var(--ios-separator-color)', borderBottomWidth: 0.5 }}>
@@ -290,7 +302,7 @@ function TaskCard({ task, currentUserId, onToggle, onDelete, dark }: { task: Tas
         )}
         <div className="flex items-center gap-2 mt-3">
           <span className="text-[12px] font-medium" style={{ color: colors.labelColor }}>
-            {hasAssignees ? 'Назначено:' : 'Для всего дома'}
+            {hasAssignees ? 'Назначено:' : 'Для всей группы'}
           </span>
           {assignees.slice(0, 4).map((a) => (
             <AvatarCircle key={a.id} userId={a.userId} displayName={a.user?.displayName || '?'} size={22} fontSize={9} />

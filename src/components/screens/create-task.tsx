@@ -11,43 +11,8 @@ import type { TaskCategory, User } from '@/lib/types';
 const CATEGORY_LABELS: Record<string, string> = { shopping: 'Покупки', chores: 'Домашние дела' };
 const UNIT_OPTIONS = ['шт', 'кг', 'г', 'л', 'мл', 'уп'];
 
-/**
- * Ensure user has an active house — auto-creates one if needed.
- * Returns the house ID to use for the task.
- */
-async function ensureHouse(displayName: string): Promise<string | null> {
-  const store = useAppStore.getState();
-
-  // Already have an active house
-  if (store.activeHouse?.id) return store.activeHouse.id;
-
-  // Try to find existing house
-  const res = await authFetch('/api/houses');
-  if (res.ok) {
-    const { houses } = await res.json();
-    const safe = Array.isArray(houses) ? houses : [];
-    if (safe.length > 0) {
-      store.setActiveHouse(safe[0]);
-      return safe[0].id;
-    }
-  }
-
-  // No house exists — auto-create "Мои задачи"
-  const createRes = await authFetch('/api/houses', {
-    method: 'POST',
-    body: JSON.stringify({ name: 'Мои задачи' }),
-  });
-  if (createRes.ok) {
-    const { house } = await createRes.json();
-    store.setActiveHouse(house);
-    return house.id;
-  }
-
-  return null;
-}
-
 export function CreateTaskScreen() {
-  const { currentUser, activeCategory, popScreen, showToast, darkMode } = useAppStore();
+  const { currentUser, activeHouse, activeCategory, popScreen, showToast, darkMode } = useAppStore();
 
   const [category, setCategory] = useState<TaskCategory>(activeCategory);
   const [title, setTitle] = useState('');
@@ -80,20 +45,13 @@ export function CreateTaskScreen() {
   }, [currentUser]);
 
   const handleCreate = async () => {
-    if (!title.trim() || !currentUser) return;
+    if (!title.trim() || !currentUser || !activeHouse) return;
     setLoading(true);
     try {
-      // Auto-create house if user doesn't have one
-      const houseId = await ensureHouse(currentUser.displayName || 'Пользователь');
-      if (!houseId) {
-        showToast('Не удалось создать дом');
-        return;
-      }
-
       const res = await authFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify({
-          houseId,
+          houseId: activeHouse.id,
           title: title.trim(),
           category,
           description: description.trim() || null,
@@ -172,7 +130,7 @@ export function CreateTaskScreen() {
               <Home size={14} color={assignedTo.length === 0 ? '#8E8E93' : '#007AFF'} strokeWidth={2} />
             </div>
             <span className="flex-1 text-[15px]" style={{ color: 'var(--ios-text-primary)' }}>
-              {assignedTo.length === 0 ? 'Для всего дома' : `Выбрано: ${assignedTo.length}`}
+              {assignedTo.length === 0 ? 'Для всей группы' : `Выбрано: ${assignedTo.length}`}
             </span>
             <button onClick={() => setShowAssignPicker(true)} className="flex items-center gap-1 px-3 py-[6px] rounded-full" style={{ background: 'var(--ios-blue-bg)' }}>
               <Users size={14} color="#007AFF" strokeWidth={2} />

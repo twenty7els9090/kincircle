@@ -52,20 +52,6 @@ export async function POST(request: NextRequest) {
     });
     if (!membership) return NextResponse.json({ error: 'Not a member' }, { status: 403 });
 
-    // Auto-add assignees to house if they're not already members
-    if (Array.isArray(assigneeIds) && assigneeIds.length > 0) {
-      for (const uid of assigneeIds) {
-        const existing = await db.houseMember.findFirst({
-          where: { houseId, userId: uid },
-        });
-        if (!existing) {
-          await db.houseMember.create({
-            data: { houseId, userId: uid, role: 'member' },
-          });
-        }
-      }
-    }
-
     // Create task
     const task = await db.task.create({
       data: {
