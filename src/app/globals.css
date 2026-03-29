@@ -75,6 +75,12 @@
   input, textarea {
     user-select: text;
   }
+  /* Smooth theme transitions */
+  *, *::before, *::after {
+    transition-property: background-color, background, border-color, color, box-shadow, opacity;
+    transition-duration: 0.3s;
+    transition-timing-function: ease;
+  }
 }
 
 @layer utilities {
