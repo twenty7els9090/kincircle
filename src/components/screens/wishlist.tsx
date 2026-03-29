@@ -334,15 +334,17 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, dire
 
             {/* ── All text overlaid on card ── */}
             <div className="absolute inset-x-0 bottom-0 p-5 pb-6 flex flex-col gap-2">
-              <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
-              {formattedPrice && <p className="text-[15px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
-              {currentItem.link && (
-                <a href={currentItem.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[13px] font-medium mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }} onClick={(e) => e.stopPropagation()}>
-                  <ExternalLink size={13} strokeWidth={2} /> Открыть ссылку
-                </a>
-              )}
+              <div className="flex items-baseline gap-3">
+                <p className="text-[22px] font-bold leading-tight text-white drop-shadow-sm flex-1 min-w-0">{currentItem.title}</p>
+                {formattedPrice && <p className="text-[20px] font-bold shrink-0" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
+              </div>
               {currentItem.comment && (
                 <p className="text-[13px] leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>{currentItem.comment}</p>
+              )}
+              {currentItem.link && (
+                <a href={currentItem.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[13px] font-medium mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }} onClick={(e) => e.stopPropagation()}>
+                  <ExternalLink size={13} strokeWidth={2} /> Ссылка
+                </a>
               )}
               {currentItem.visibleTo && (
                 <p className="text-[12px] mt-0.5" style={{ color: '#FFCC00' }}>👁 Видно только одному человеку</p>
