@@ -168,7 +168,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-            className="text-[32px] font-semibold leading-[1.2] tracking-[-0.02em]"
+            className="text-[29px] font-semibold leading-[1.2] tracking-[-0.01em]"
             style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
           >
             <p>Все!</p>
