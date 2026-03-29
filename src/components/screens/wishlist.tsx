@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Gift, Trash2, ExternalLink,
+  Gift, Trash2, ExternalLink,
   ChevronRight, Users, Lock, Heart,
 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
@@ -185,7 +185,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
             >
               Чего,
             </motion.p>
-            {/* Line 3: Хочу я... + heart button */}
+            {/* Line 3: Хочу я... + heart + добавить */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -200,15 +200,16 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
               </p>
               <button
                 onClick={() => setShowAddSheet(true)}
-                className={`rounded-full flex items-center justify-center active:scale-90 transition-transform shrink-0 ${hasItems ? 'w-[30px] h-[30px]' : 'w-[44px] h-[44px]'}`}
+                className={`rounded-full flex items-center gap-1.5 active:scale-90 transition-transform shrink-0 ${hasItems ? 'pl-2 pr-3 py-1' : 'pl-2.5 pr-4 py-1.5'}`}
                 style={{ background: '#FF2D55' }}
               >
                 <Heart
-                  size={hasItems ? 16 : 22}
+                  size={hasItems ? 14 : 18}
                   color="white"
                   fill="white"
                   strokeWidth={0}
                 />
+                <span className={`font-semibold text-white ${hasItems ? 'text-[13px]' : 'text-[16px]'}`}>добавить</span>
               </button>
             </motion.div>
           </div>
@@ -235,12 +236,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
         </div>
       )}
 
-      {/* FAB — only when has items */}
-      {hasItems && (
-        <button onClick={() => setShowAddSheet(true)} className="fixed bottom-24 right-4 w-[56px] h-[56px] rounded-full flex items-center justify-center z-[60] shadow-lg active:scale-95 transition-transform" style={{ background: '#007AFF' }}>
-          <Plus size={28} color="white" strokeWidth={2.5} />
-        </button>
-      )}
+
 
       <AddWishSheet open={showAddSheet} onClose={() => setShowAddSheet(false)} onAdd={handleAddItem} />
     </div>
