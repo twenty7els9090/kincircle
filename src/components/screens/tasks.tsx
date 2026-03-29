@@ -6,6 +6,7 @@ import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
+import { markLocalAction } from '@/lib/realtime-guard';
 import type { House, Task } from '@/lib/types';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -78,6 +79,7 @@ export function TasksScreen() {
     const snapshot = [...tasks];
     const nextIsDone = !task.isDone;
     const userId = currentUser?.id;
+    markLocalAction();
 
     const newCompletedBy: string | null = nextIsDone ? (userId ?? null) : null;
     const newCompleter = nextIsDone ? (userId ? { id: userId } : null) : null;
@@ -102,6 +104,7 @@ export function TasksScreen() {
   // OPTIMISTIC delete
   const deleteTask = (task: Task) => {
     const snapshot = [...tasks];
+    markLocalAction();
     setTasks(snapshot.filter((t) => t.id !== task.id));
     showToast('Задача удалена');
 
@@ -214,6 +217,7 @@ export function TasksScreen() {
                   setShowClearConfirm(false);
                   const snapshot = [...tasks];
                   const doneIds = doneTasks.map((t) => t.id);
+                  markLocalAction();
                   setTasks(snapshot.filter((t) => !t.isDone));
                   showToast('Очищено');
                   Promise.all(doneIds.map((id) => authFetch(`/api/tasks/${id}`, { method: 'DELETE' }))).catch(() => { setTasks(snapshot); showToast('Ошибка очистки'); });
