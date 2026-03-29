@@ -31,20 +31,49 @@ interface AvatarCircleProps {
   displayName: string;
   size?: number;
   fontSize?: number;
+  avatarUrl?: string | null;
 }
 
-export function AvatarCircle({ userId, displayName, size = 36, fontSize = 12 }: AvatarCircleProps) {
+export function AvatarCircle({ userId, displayName, size = 36, fontSize = 12, avatarUrl }: AvatarCircleProps) {
   const color = useMemo(() => getColor(userId), [userId]);
   const initials = useMemo(() => getInitials(displayName), [displayName]);
 
   return (
     <div
-      className="flex items-center justify-center rounded-full shrink-0"
-      style={{ width: size, height: size, backgroundColor: color.bg }}
+      className="flex items-center justify-center rounded-full shrink-0 overflow-hidden"
+      style={{ width: size, height: size }}
     >
-      <span style={{ color: color.fg, fontSize, fontWeight: 600 }}>
-        {initials}
-      </span>
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={displayName}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // Fallback to initials on error
+            const target = e.currentTarget;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              parent.style.backgroundColor = color.bg;
+              const span = document.createElement('span');
+              span.textContent = initials;
+              span.style.color = color.fg;
+              span.style.fontSize = `${fontSize}px`;
+              span.style.fontWeight = '600';
+              parent.appendChild(span);
+            }
+          }}
+        />
+      ) : (
+        <div
+          className="flex items-center justify-center rounded-full"
+          style={{ width: size, height: size, backgroundColor: color.bg }}
+        >
+          <span style={{ color: color.fg, fontSize, fontWeight: 600 }}>
+            {initials}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

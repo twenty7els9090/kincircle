@@ -241,7 +241,7 @@ export function ProfileScreen() {
       <div className="px-4 mb-6">
         <div className="ios-card p-4">
           <div className="flex items-center gap-4">
-            <AvatarCircle userId={currentUser.id} displayName={currentUser.displayName} size={56} fontSize={18} />
+            <AvatarCircle userId={currentUser.id} displayName={currentUser.displayName} size={56} fontSize={18} avatarUrl={currentUser.avatarUrl} />
             <div className="flex-1 min-w-0">
               <h2 className="text-[17px] font-semibold" style={{ color: 'var(--ios-text-primary)' }}>{currentUser.displayName}</h2>
               {currentUser.username && (
@@ -251,23 +251,23 @@ export function ProfileScreen() {
           </div>
           {currentUser.friendCode && (
             <div
-              className="mt-3 pt-3 flex items-center justify-between"
+              className="mt-3 pt-3"
               style={{ borderTop: '0.5px solid rgba(0,0,0,0.06)' }}
             >
-              <div>
-                <p className="text-[12px] font-medium" style={{ color: '#8E8E93' }}>Код для друга</p>
+              <p className="text-[12px] font-medium" style={{ color: '#8E8E93' }}>Код для друга</p>
+              <div className="flex items-center gap-2 mt-1">
                 <p className="text-[17px] font-semibold tracking-[0.1em]" style={{ color: 'var(--ios-text-primary)' }}>{currentUser.friendCode}</p>
+                <button
+                  onClick={copyCode}
+                  className="w-[32px] h-[32px] rounded-full flex items-center justify-center active:opacity-60 transition-opacity"
+                  style={{ background: 'var(--ios-toggle-bg)' }}
+                >
+                  {copied
+                    ? <Check size={16} color="#34C759" strokeWidth={2.5} />
+                    : <Copy size={16} color="#007AFF" strokeWidth={2} />
+                  }
+                </button>
               </div>
-              <button
-                onClick={copyCode}
-                className="w-[40px] h-[40px] rounded-full flex items-center justify-center"
-                style={{ background: 'var(--ios-toggle-bg)' }}
-              >
-                {copied
-                  ? <Check size={18} color="#34C759" strokeWidth={2.5} />
-                  : <Copy size={18} color="#007AFF" strokeWidth={2} />
-                }
-              </button>
             </div>
           )}
         </div>
@@ -323,7 +323,7 @@ export function ProfileScreen() {
                 <div className="mt-3 space-y-0">
                   {searchResults.map((user) => (
                     <div key={user.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
-                      <AvatarCircle userId={user.id} displayName={user.displayName} size={34} fontSize={11} />
+                      <AvatarCircle userId={user.id} displayName={user.displayName} size={34} fontSize={11} avatarUrl={user.avatarUrl} />
                       <div className="flex-1 min-w-0">
                         <span className="text-[14px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{user.displayName}</span>
                         <span className="text-[12px]" style={{ color: '#8E8E93' }}>
@@ -368,7 +368,7 @@ export function ProfileScreen() {
             {incoming.map((req, i) => (
               <div key={req.id}>
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} />
+                  <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} avatarUrl={req.user.avatarUrl} />
                   <div className="flex-1 min-w-0">
                     <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{req.user.displayName}</span>
                     {req.user.username && <span className="ios-meta">@{req.user.username}</span>}
@@ -403,7 +403,7 @@ export function ProfileScreen() {
             {sent.map((req, i) => (
               <div key={req.id}>
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} />
+                  <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} avatarUrl={req.user.avatarUrl} />
                   <div className="flex-1 min-w-0">
                     <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{req.user.displayName}</span>
                     {req.user.username && <span className="ios-meta">@{req.user.username}</span>}
@@ -526,7 +526,7 @@ export function ProfileScreen() {
           {friends.map((friend, i) => (
             <div key={friend.id}>
               <div className="flex items-center gap-3 px-4 py-3">
-                <AvatarCircle userId={friend.id} displayName={friend.displayName} size={36} fontSize={12} />
+                <AvatarCircle userId={friend.id} displayName={friend.displayName} size={36} fontSize={12} avatarUrl={friend.avatarUrl} />
                 <div className="flex-1 min-w-0">
                   <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{friend.displayName}</span>
                   {friend.username && <span className="ios-meta">@{friend.username}</span>}

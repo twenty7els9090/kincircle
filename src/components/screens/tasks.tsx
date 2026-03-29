@@ -416,7 +416,7 @@ function TaskCard({ task, onToggle, onDelete, dark }: { task: Task; onToggle: ()
             {hasAssignees ? 'Назначено:' : 'Для всей группы'}
           </span>
           {assignees.slice(0, 4).map((a) => (
-            <AvatarCircle key={a.id} userId={a.userId} displayName={a.user?.displayName || '?'} size={22} fontSize={9} />
+            <AvatarCircle key={a.id} userId={a.userId} displayName={a.user?.displayName || '?'} size={22} fontSize={9} avatarUrl={a.user?.avatarUrl} />
           ))}
           {assignees.length > 4 && (
             <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: colors.avatarBg, color: colors.labelColor }}>
