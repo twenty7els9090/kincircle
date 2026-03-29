@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, Gift, ExternalLink, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, Gift, ExternalLink, Info, Trash2 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 
 /* ─── Types ─── */
@@ -62,11 +62,7 @@ export function FriendWishlistScreen() {
     setLoading(true);
     try {
       const res = await authFetch(`/api/wishlist/friends/${friendId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setItems(Array.isArray(data.items) ? data.items : []);
-        setFriendName(data.displayName || '');
-      }
+      if (res.ok) { const data = await res.json(); setItems(Array.isArray(data.items) ? data.items : []); setFriendName(data.displayName || ''); }
     } catch { showToast('Не удалось загрузить'); } finally { setLoading(false); }
   }, [friendId, showToast]);
 
@@ -80,20 +76,13 @@ export function FriendWishlistScreen() {
     if (!currentUser) return;
     setReserving(itemId);
     try {
-      const res = await authFetch(`/api/wishlist/items/${itemId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ userId: currentUser.id, action }),
-      });
+      const res = await authFetch(`/api/wishlist/items/${itemId}`, { method: 'PATCH', body: JSON.stringify({ userId: currentUser.id, action }) });
       if (res.ok) { showToast(action === 'reserve' ? 'Зарезервировано!' : 'Резерв отменён'); fetchItems(); }
     } catch { showToast('Ошибка'); } finally { setReserving(null); }
   };
 
-  const currentItem = items[currentIndex];
-  const currentUserId = currentUser?.id || '';
-
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3" style={{ minHeight: 60, marginTop: 8 }}>
         <button onClick={popScreen} className="flex items-center gap-1 min-w-[60px]">
           <ChevronLeft size={22} color="#007AFF" />
@@ -116,39 +105,25 @@ export function FriendWishlistScreen() {
           <p className="ios-meta mt-1">У {friendName} пока нет желаний</p>
         </div>
       ) : (
-        <>
-          <div className="flex flex-col items-center px-4 mt-4">
-            <FriendCardStack
-              items={items}
-              currentIndex={currentIndex}
-              onIndexChange={setCurrentIndex}
-              dark={darkMode}
-              currentUserId={currentUserId}
-              onReserve={handleReserve}
-              reserving={reserving}
-            />
-            <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={setCurrentIndex} />
-          </div>
-        </>
+        <div className="flex flex-col items-center px-4 mt-4">
+          <FriendCardStack
+            items={items} currentIndex={currentIndex} onIndexChange={setCurrentIndex}
+            dark={darkMode} currentUserId={currentUser?.id || ''} onReserve={handleReserve} reserving={reserving}
+          />
+          <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={setCurrentIndex} />
+        </div>
       )}
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   Friend Card Stack — all info on card + reserve actions
+   Friend Card Stack — one solid card, all info overlaid
    ═══════════════════════════════════════════════════════ */
 
-function FriendCardStack({
-  items, currentIndex, onIndexChange, dark, currentUserId, onReserve, reserving,
-}: {
-  items: WishItem[];
-  currentIndex: number;
-  onIndexChange: (i: number) => void;
-  dark?: boolean;
-  currentUserId: string;
-  onReserve: (id: string, action: 'reserve' | 'unreserve') => void;
-  reserving: string | null;
+function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUserId, onReserve, reserving }: {
+  items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; dark?: boolean;
+  currentUserId: string; onReserve: (id: string, action: 'reserve' | 'unreserve') => void; reserving: string | null;
 }) {
   const touchStartX = useRef(0);
   const [swipeDelta, setSwipeDelta] = useState(0);
@@ -168,8 +143,7 @@ function FriendCardStack({
   };
 
   const formattedPrice = formatPrice(currentItem.price || null);
-  const placeholderColor = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
-
+  const color = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
   const isReservedByMe = currentItem.reservedBy === currentUserId;
   const isReservedByOther = currentItem.reservedBy && currentItem.reservedBy !== currentUserId;
   const isFree = !currentItem.reservedBy;
@@ -177,145 +151,92 @@ function FriendCardStack({
 
   return (
     <div className="relative w-full" style={{ height: CARD_HEIGHT }}>
-      {/* Ghost card 2 */}
+      {/* Ghost cards */}
       {hasNext2 && (
         <div className="absolute rounded-[20px]" style={{
           top: 0, left: 0, right: 0, height: CARD_HEIGHT,
           background: PLACEHOLDER_COLORS[(currentIndex + 2) % PLACEHOLDER_COLORS.length],
           transform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
-          WebkitTransform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
-          opacity: 0.45,
+          WebkitTransform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)', opacity: 0.45,
         }} />
       )}
-
-      {/* Ghost card 1 */}
       {hasNext1 && (
         <div className="absolute rounded-[20px]" style={{
           top: 0, left: 0, right: 0, height: CARD_HEIGHT,
           background: PLACEHOLDER_COLORS[(currentIndex + 1) % PLACEHOLDER_COLORS.length],
           transform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
-          WebkitTransform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
-          opacity: 0.7,
+          WebkitTransform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)', opacity: 0.7,
         }} />
       )}
 
-      {/* ─── Top card ─── */}
+      {/* ─── Card (ONE surface) ─── */}
       <motion.div
         className="absolute rounded-[24px] overflow-hidden"
-        style={{
-          top: 0, left: 0, right: 0, height: CARD_HEIGHT,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-        }}
+        style={{ top: 0, left: 0, right: 0, height: CARD_HEIGHT, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
         animate={{ x: swipeDelta }}
         transition={{ type: 'spring', stiffness: 500, damping: 40 }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* ── Image area (top ~55%) ── */}
-        <div className="relative" style={{ height: '55%' }}>
-          <div className="absolute inset-0" style={{ background: placeholderColor }}>
-            {currentItem.photoUrl ? (
-              <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
-              </div>
-            )}
-          </div>
-
-          {/* Gradient overlay */}
-          <div className="absolute inset-x-0 bottom-0" style={{
-            height: '60%',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)',
-          }} />
-
-          {/* Title + price on image */}
-          <div className="absolute inset-x-0 bottom-0 p-4 pb-3">
-            <p className="text-[19px] font-bold leading-tight text-white drop-shadow-sm">
-              {currentItem.title}
-            </p>
-            {formattedPrice && (
-              <p className="text-[14px] mt-1 font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                {formattedPrice}
-              </p>
-            )}
-          </div>
-
-          {/* Status badge top-right */}
-          {isReservedByMe && (
-            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold" style={{ background: 'rgba(255,149,0,0.9)', color: '#fff' }}>
-              Я беру
-            </div>
-          )}
-          {isReservedByOther && (
-            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold" style={{ background: 'rgba(0,0,0,0.45)', color: '#fff' }}>
-              Занято
+        {/* Full background */}
+        <div className="absolute inset-0" style={{ background: color }}>
+          {currentItem.photoUrl ? (
+            <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
             </div>
           )}
         </div>
 
-        {/* ── Info area (bottom ~45%) ── */}
-        <div
-          className="p-4 pt-3 space-y-2.5"
-          style={{
-            background: dark ? '#1C1C1E' : '#ffffff',
-            height: '45%',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* Link */}
+        {/* Bottom gradient */}
+        <div className="absolute inset-x-0 bottom-0" style={{
+          height: '80%',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.12) 65%, transparent 100%)',
+        }} />
+
+        {/* Status badge top-right */}
+        {isReservedByMe && (
+          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold z-10" style={{ background: 'rgba(255,149,0,0.9)', color: '#fff' }}>Я беру</div>
+        )}
+        {isReservedByOther && (
+          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold z-10" style={{ background: 'rgba(0,0,0,0.45)', color: '#fff' }}>Занято</div>
+        )}
+
+        {/* ── All text overlaid ── */}
+        <div className="absolute inset-x-0 bottom-0 p-5 pb-5 flex flex-col gap-2">
+          <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
+          {formattedPrice && <p className="text-[15px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
           {currentItem.link && (
-            <a
-              href={currentItem.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-[13px] font-medium shrink-0"
-              style={{ color: '#007AFF' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ExternalLink size={13} strokeWidth={2} />
-              Открыть ссылку
+            <a href={currentItem.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.75)' }} onClick={(e) => e.stopPropagation()}>
+              <ExternalLink size={13} strokeWidth={2} /> Открыть ссылку
             </a>
           )}
-
-          {/* Comment */}
           {currentItem.comment && (
-            <div className="rounded-xl p-2.5 shrink-0" style={{ background: dark ? '#2C2C2E' : '#F2F2F7' }}>
-              <p className="text-[13px] leading-relaxed" style={{ color: '#8E8E93' }}>
-                {currentItem.comment}
-              </p>
-            </div>
+            <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{currentItem.comment}</p>
           )}
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* ── Reserve actions ── */}
-          <div className="shrink-0">
+          {/* Reserve actions */}
+          <div className="mt-1">
             {isFree && (
               <button
-                onClick={() => onReserve(currentItem.id, 'reserve')}
-                disabled={!!isReservingThis}
+                onClick={() => onReserve(currentItem.id, 'reserve')} disabled={!!isReservingThis}
                 className="w-full py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity"
                 style={{ background: '#007AFF', color: '#ffffff', opacity: isReservingThis ? 0.5 : 1 }}
               >
                 Зарезервирую — куплю это
               </button>
             )}
-
             {isReservedByOther && (
-              <div className="flex items-start gap-2 rounded-xl p-2.5" style={{ background: '#FFF8E1' }}>
-                <Info size={15} color="#FF9500" className="shrink-0 mt-0.5" />
-                <p className="text-[13px] leading-relaxed" style={{ color: '#B07800' }}>Кто-то уже планирует купить это</p>
+              <div className="flex items-start gap-2 rounded-xl p-2.5" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                <Info size={15} color="rgba(255,255,255,0.8)" className="shrink-0 mt-0.5" />
+                <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>Кто-то уже планирует купить это</p>
               </div>
             )}
-
             {isReservedByMe && (
               <button
-                onClick={() => onReserve(currentItem.id, 'unreserve')}
-                disabled={!!isReservingThis}
+                onClick={() => onReserve(currentItem.id, 'unreserve')} disabled={!!isReservingThis}
                 className="w-full py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity"
                 style={{ background: '#34C759', color: '#ffffff', opacity: isReservingThis ? 0.5 : 1 }}
               >

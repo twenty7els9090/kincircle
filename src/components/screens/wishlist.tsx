@@ -50,17 +50,14 @@ function formatPrice(raw: string | null): string | null {
   const cleaned = raw.replace(/[₽\s]/g, '').replace(',', '.');
   const num = parseFloat(cleaned);
   if (isNaN(num)) return raw;
-  const formatted = num.toLocaleString('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
+  const formatted = num.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   return `${formatted} ₽`;
 }
 
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 480;
+const CARD_HEIGHT = 460;
 const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════
@@ -73,14 +70,9 @@ export function WishlistScreen() {
 
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
-      {/* Header */}
       <div className="shrink-0 px-4 pt-[60px] pb-2">
-        <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>
-          Вишлист
-        </h1>
+        <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Вишлист</h1>
       </div>
-
-      {/* Segmented Control */}
       <div className="shrink-0 px-4 mt-2 mb-4">
         <SegmentedControl
           options={['Мои желания', 'Друзья']}
@@ -89,33 +81,14 @@ export function WishlistScreen() {
           dark={darkMode}
         />
       </div>
-
-      {/* Content */}
       <AnimatePresence mode="wait">
         {tab === 'mine' ? (
-          <motion.div
-            key="mine"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.2 }}
-            className="flex-1"
-          >
+          <motion.div key="mine" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} className="flex-1">
             <MyWishlist />
           </motion.div>
         ) : (
-          <motion.div
-            key="friends"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
-            className="flex-1"
-          >
-            <FriendsWishlists onFriendPress={(friendId) => {
-              setFriendWishlistUserId(friendId);
-              pushScreen('friend-wishlist');
-            }} />
+          <motion.div key="friends" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="flex-1">
+            <FriendsWishlists onFriendPress={(friendId) => { setFriendWishlistUserId(friendId); pushScreen('friend-wishlist'); }} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -139,42 +112,28 @@ function MyWishlist() {
     setLoading(true);
     try {
       const res = await authFetch(`/api/wishlist?userId=${currentUser.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setWishList(data.wishList || null);
-      }
-    } catch { /* silent */ } finally {
-      setLoading(false);
-    }
+      if (res.ok) { const data = await res.json(); setWishList(data.wishList || null); }
+    } catch { /* silent */ } finally { setLoading(false); }
   }, [currentUser]);
 
   useEffect(() => { fetchWishlist(); }, [fetchWishlist]);
-
   useEffect(() => {
-    const handler = () => fetchWishlist();
-    window.addEventListener('kinnect:wishlist-changed', handler);
-    return () => window.removeEventListener('kinnect:wishlist-changed', handler);
+    const h = () => fetchWishlist();
+    window.addEventListener('kinnect:wishlist-changed', h);
+    return () => window.removeEventListener('kinnect:wishlist-changed', h);
   }, [fetchWishlist]);
-
   useEffect(() => {
     if (!wishList) return;
     if (wishList.items.length === 0) setCurrentIndex(0);
     else if (currentIndex >= wishList.items.length) setCurrentIndex(wishList.items.length - 1);
   }, [wishList?.items.length, currentIndex]);
 
-  const handleAddItem = async (item: {
-    title: string; photoUrl?: string; price?: string;
-    link?: string; comment?: string; visibleTo?: string | null;
-  }) => {
+  const handleAddItem = async (item: { title: string; photoUrl?: string; price?: string; link?: string; comment?: string; visibleTo?: string | null }) => {
     if (!currentUser) return;
     setShowAddSheet(false);
     try {
-      const res = await authFetch('/api/wishlist/items', {
-        method: 'POST',
-        body: JSON.stringify({ userId: currentUser.id, ...item }),
-      });
-      if (res.ok) { showToast('Желание добавлено!'); fetchWishlist(); }
-      else showToast('Не удалось добавить');
+      const res = await authFetch('/api/wishlist/items', { method: 'POST', body: JSON.stringify({ userId: currentUser.id, ...item }) });
+      if (res.ok) { showToast('Желание добавлено!'); fetchWishlist(); } else showToast('Не удалось добавить');
     } catch { showToast('Ошибка'); }
   };
 
@@ -190,13 +149,7 @@ function MyWishlist() {
 
   const items = wishList?.items || [];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} /></div>;
 
   return (
     <div className="relative">
@@ -213,49 +166,29 @@ function MyWishlist() {
           </button>
         </div>
       ) : (
-        <>
-          {/* ── Card Stack ── */}
-          <div className="flex flex-col items-center px-4 mt-2">
-            <OwnCardStack
-              items={items}
-              currentIndex={currentIndex}
-              onIndexChange={setCurrentIndex}
-              onDelete={handleDeleteItem}
-              dark={darkMode}
-            />
-            {/* Dots */}
-            <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={setCurrentIndex} />
-          </div>
-        </>
+        <div className="flex flex-col items-center px-4 mt-2">
+          <OwnCardStack items={items} currentIndex={currentIndex} onIndexChange={setCurrentIndex} onDelete={handleDeleteItem} dark={darkMode} />
+          <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={setCurrentIndex} />
+        </div>
       )}
-
-      {/* FAB */}
       {items.length > 0 && (
         <button onClick={() => setShowAddSheet(true)} className="fixed bottom-24 right-4 w-[56px] h-[56px] rounded-full flex items-center justify-center z-[60] shadow-lg active:scale-95 transition-transform" style={{ background: '#007AFF' }}>
           <Plus size={28} color="white" strokeWidth={2.5} />
         </button>
       )}
-
       <AddWishSheet open={showAddSheet} onClose={() => setShowAddSheet(false)} onAdd={handleAddItem} />
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   Own Card Stack — all info on card, trash in corner
+   Own Card Stack — one solid card, all info overlaid
    ═══════════════════════════════════════════════════════ */
 
-function OwnCardStack({
-  items, currentIndex, onIndexChange, onDelete, dark,
-}: {
-  items: WishItem[];
-  currentIndex: number;
-  onIndexChange: (i: number) => void;
-  onDelete: (id: string) => void;
-  dark?: boolean;
+function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark }: {
+  items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; onDelete: (id: string) => void; dark?: boolean;
 }) {
   const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
   const [swipeDelta, setSwipeDelta] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
 
@@ -265,16 +198,8 @@ function OwnCardStack({
   const hasNext1 = currentIndex + 1 < items.length;
   const hasNext2 = currentIndex + 2 < items.length;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const dx = e.touches[0].clientX - touchStartX.current;
-    setSwipeDelta(dx);
-  };
-
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchMove = (e: React.TouchEvent) => { setSwipeDelta(e.touches[0].clientX - touchStartX.current); };
   const handleTouchEnd = () => {
     if (swipeDelta < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
     else if (swipeDelta > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
@@ -282,7 +207,7 @@ function OwnCardStack({
   };
 
   const formattedPrice = formatPrice(currentItem.price);
-  const placeholderColor = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
+  const color = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
 
   return (
     <>
@@ -297,7 +222,6 @@ function OwnCardStack({
             opacity: 0.45,
           }} />
         )}
-
         {/* Ghost card 1 */}
         {hasNext1 && (
           <div className="absolute rounded-[20px]" style={{
@@ -309,7 +233,7 @@ function OwnCardStack({
           }} />
         )}
 
-        {/* ─── Top card ─── */}
+        {/* ─── Card (ONE surface) ─── */}
         <motion.div
           className="absolute rounded-[24px] overflow-hidden"
           style={{
@@ -322,64 +246,54 @@ function OwnCardStack({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* ── Image area (top ~60%) ── */}
-          <div className="relative" style={{ height: '58%' }}>
-            <div className="absolute inset-0" style={{ background: placeholderColor }}>
-              {currentItem.photoUrl ? (
-                <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
-                </div>
-              )}
-            </div>
-
-            {/* Gradient overlay */}
-            <div className="absolute inset-x-0 bottom-0" style={{
-              height: '60%',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)',
-            }} />
-
-            {/* Title + price on image */}
-            <div className="absolute inset-x-0 bottom-0 p-4 pb-3">
-              <p className="text-[19px] font-bold leading-tight text-white drop-shadow-sm">
-                {currentItem.title}
-              </p>
-              {formattedPrice && (
-                <p className="text-[14px] mt-1 font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {formattedPrice}
-                </p>
-              )}
-            </div>
-
-            {/* ── Trash button top-right ── */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
-              className="absolute top-3 right-3 w-[36px] h-[36px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
-              style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-            >
-              <Trash2 size={18} color="white" strokeWidth={2} />
-            </button>
+          {/* Full background: image or color */}
+          <div className="absolute inset-0" style={{ background: color }}>
+            {currentItem.photoUrl ? (
+              <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
+              </div>
+            )}
           </div>
 
-          {/* ── Info area (bottom ~42%) ── */}
-          <div
-            className="p-4 pt-3 space-y-2.5"
-            style={{
-              background: dark ? '#1C1C1E' : '#ffffff',
-              height: '42%',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
+          {/* Bottom gradient for text readability */}
+          <div className="absolute inset-x-0 bottom-0" style={{
+            height: '75%',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.15) 65%, transparent 100%)',
+          }} />
+
+          {/* ── Trash button top-right ── */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
+            className="absolute top-3 right-3 w-[36px] h-[36px] rounded-full flex items-center justify-center active:scale-90 transition-transform z-10"
+            style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           >
+            <Trash2 size={17} color="white" strokeWidth={2} />
+          </button>
+
+          {/* ── All text overlaid on card ── */}
+          <div className="absolute inset-x-0 bottom-0 p-5 pb-6 flex flex-col gap-2">
+            {/* Title */}
+            <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">
+              {currentItem.title}
+            </p>
+
+            {/* Price */}
+            {formattedPrice && (
+              <p className="text-[15px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                {formattedPrice}
+              </p>
+            )}
+
             {/* Link */}
             {currentItem.link && (
               <a
                 href={currentItem.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium shrink-0"
-                style={{ color: '#007AFF' }}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium mt-0.5"
+                style={{ color: 'rgba(255,255,255,0.75)' }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <ExternalLink size={13} strokeWidth={2} />
@@ -389,27 +303,22 @@ function OwnCardStack({
 
             {/* Comment */}
             {currentItem.comment && (
-              <div className="rounded-xl p-2.5 shrink-0" style={{ background: dark ? '#2C2C2E' : '#F2F2F7' }}>
-                <p className="text-[13px] leading-relaxed" style={{ color: '#8E8E93' }}>
-                  {currentItem.comment}
-                </p>
-              </div>
+              <p className="text-[13px] leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                {currentItem.comment}
+              </p>
             )}
 
             {/* Visibility hint */}
             {currentItem.visibleTo && (
-              <p className="text-[12px] shrink-0" style={{ color: '#FF9500' }}>
+              <p className="text-[12px] mt-0.5" style={{ color: '#FFCC00' }}>
                 👁 Видно только одному человеку
               </p>
             )}
-
-            {/* Spacer */}
-            <div className="flex-1" />
           </div>
         </motion.div>
       </div>
 
-      {/* ── Delete confirmation ── */}
+      {/* Delete confirmation */}
       <AnimatePresence>
         {showDelete && (
           <motion.div
@@ -428,16 +337,10 @@ function OwnCardStack({
                 <Trash2 size={22} color="#FF3B30" strokeWidth={2} />
               </div>
               <p className="text-[17px] font-semibold mb-1" style={{ color: dark ? '#F5F5F7' : '#1C1C1E' }}>Удалить желание?</p>
-              <p className="text-[13px] mb-5" style={{ color: '#8E8E93' }}>
-                &laquo;{currentItem.title}&raquo; будет удалено безвозвратно
-              </p>
+              <p className="text-[13px] mb-5" style={{ color: '#8E8E93' }}>&laquo;{currentItem.title}&raquo; будет удалено безвозвратно</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowDelete(false)} className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold" style={{ background: dark ? '#3A3A3C' : '#F2F2F7', color: dark ? '#F5F5F7' : '#1C1C1E' }}>
-                  Отмена
-                </button>
-                <button onClick={() => { setShowDelete(false); onDelete(currentItem.id); }} className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold text-white" style={{ background: '#FF3B30' }}>
-                  Удалить
-                </button>
+                <button onClick={() => setShowDelete(false)} className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold" style={{ background: dark ? '#3A3A3C' : '#F2F2F7', color: dark ? '#F5F5F7' : '#1C1C1E' }}>Отмена</button>
+                <button onClick={() => { setShowDelete(false); onDelete(currentItem.id); }} className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold text-white" style={{ background: '#FF3B30' }}>Удалить</button>
               </div>
             </motion.div>
           </motion.div>
@@ -463,18 +366,15 @@ function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => vo
       const params = new URLSearchParams({ userId: currentUser.id });
       if (activeHouse) params.set('houseId', activeHouse.id);
       const res = await authFetch(`/api/wishlist/friends?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setFriendsLists(Array.isArray(data.friendsLists) ? data.friendsLists : []);
-      }
+      if (res.ok) { const data = await res.json(); setFriendsLists(Array.isArray(data.friendsLists) ? data.friendsLists : []); }
     } catch { /* silent */ } finally { setLoading(false); }
   }, [currentUser, activeHouse]);
 
   useEffect(() => { fetchFriendsLists(); }, [fetchFriendsLists]);
   useEffect(() => {
-    const handler = () => fetchFriendsLists();
-    window.addEventListener('kinnect:wishlist-changed', handler);
-    return () => window.removeEventListener('kinnect:wishlist-changed', handler);
+    const h = () => fetchFriendsLists();
+    window.addEventListener('kinnect:wishlist-changed', h);
+    return () => window.removeEventListener('kinnect:wishlist-changed', h);
   }, [fetchFriendsLists]);
 
   if (loading) return <div className="flex items-center justify-center py-20"><div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} /></div>;
@@ -512,11 +412,7 @@ function FriendMiniStack({ wishList, dark, onPress }: { wishList: FriendsWishLis
   const freeCount = totalItems - reservedCount;
 
   return (
-    <button
-      onClick={onPress}
-      className="w-full text-left rounded-2xl overflow-hidden transition-shadow active:scale-[0.98] active:opacity-80"
-      style={{ background: cardBg, border: dark ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
-    >
+    <button onClick={onPress} className="w-full text-left rounded-2xl overflow-hidden transition-shadow active:scale-[0.98] active:opacity-80" style={{ background: cardBg, border: dark ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <div className="relative" style={{ height: 100, background: topItem ? PLACEHOLDER_COLORS[0] : (dark ? '#2C2C2E' : '#F2F2F7') }}>
         {topItem?.photoUrl ? <img src={topItem.photoUrl} alt="" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full"><Gift size={28} color="rgba(0,0,0,0.12)" /></div>}
       </div>
