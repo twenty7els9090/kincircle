@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS "WishItem" (
     "price" TEXT,
     "link" TEXT,
     "comment" TEXT,
+    "visibleTo" TEXT,
     "reservedBy" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS "WishItem" (
 
 CREATE INDEX IF NOT EXISTS "WishItem_wishListId_idx" ON "WishItem"("wishListId");
 CREATE INDEX IF NOT EXISTS "WishItem_reservedBy_idx" ON "WishItem"("reservedBy");
+CREATE INDEX IF NOT EXISTS "WishItem_visibleTo_idx" ON "WishItem"("visibleTo");
 
 
 -- ═══════════════════════════════════════════════════════════════════════════

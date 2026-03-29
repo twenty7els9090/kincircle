@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (error) return error;
 
   try {
-    const { userId, title, photoUrl, price, link, comment } = await request.json();
+    const { userId, title, photoUrl, price, link, comment, visibleTo } = await request.json();
     if (!userId || !title?.trim()) {
       return NextResponse.json({ error: 'Missing userId or title' }, { status: 400 });
     }
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
         price: price?.trim() || null,
         link: link?.trim() || null,
         comment: comment?.trim() || null,
+        visibleTo: visibleTo || null,
       },
     });
 

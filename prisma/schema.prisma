@@ -162,6 +162,7 @@ model WishItem {
   price       String?
   link        String?
   comment     String?
+  visibleTo   String?
   reservedBy  String?
   createdAt   DateTime  @default(now())
 

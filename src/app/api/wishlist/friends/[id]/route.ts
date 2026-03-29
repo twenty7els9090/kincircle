@@ -62,16 +62,19 @@ export async function GET(
       return NextResponse.json({ items: [], displayName: friend.displayName });
     }
 
-    // Transform reservedBy for privacy
-    const items = wishList.items.map((item) => ({
-      ...item,
-      reservedBy:
-        item.reservedBy === null
-          ? null
-          : item.reservedBy === requestingUserId
-            ? item.reservedBy
-            : '__someone_else__',
-    }));
+    // Filter by visibleTo and mask reservedBy for privacy
+    const items = wishList.items
+      .filter((item) => item.visibleTo === null || item.visibleTo === requestingUserId)
+      .map((item) => ({
+        ...item,
+        reservedBy:
+          item.reservedBy === null
+            ? null
+            : item.reservedBy === requestingUserId
+              ? item.reservedBy
+              : '__someone_else__',
+        visibleTo: undefined,
+      }));
 
     return NextResponse.json({
       items,

@@ -54,21 +54,24 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Transform reservedBy:
-    // - if === requestingUserId → send as-is
-    // - if !== null and !== requestingUserId → send '__someone_else__'
-    // - if null → send null
+    // Transform items:
+    // 1. Filter by visibleTo (null = everyone, or specific userId)
+    // 2. Mask reservedBy for privacy
     const friendsLists = wishLists.map((wl) => ({
       ...wl,
-      items: wl.items.map((item) => ({
-        ...item,
-        reservedBy:
-          item.reservedBy === null
-            ? null
-            : item.reservedBy === requestingUserId
-              ? item.reservedBy
-              : '__someone_else__',
-      })),
+      items: wl.items
+        .filter((item) => item.visibleTo === null || item.visibleTo === requestingUserId)
+        .map((item) => ({
+          ...item,
+          reservedBy:
+            item.reservedBy === null
+              ? null
+              : item.reservedBy === requestingUserId
+                ? item.reservedBy
+                : '__someone_else__',
+          // Hide visibleTo from friends (it's for owner only)
+          visibleTo: undefined,
+        })),
     }));
 
     return NextResponse.json({ friendsLists });

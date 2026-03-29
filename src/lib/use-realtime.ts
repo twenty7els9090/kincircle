@@ -246,6 +246,38 @@ export function useRealtime() {
     };
   }, [userId, authToken, refetchFriends]);
 
+  // ─── Step 8: Subscribe to WishList/WishItem changes (own wishlist) ───
+  useEffect(() => {
+    if (!userId || !authToken || !supabase) return;
+
+    const name1 = `rt:wl:${userId}`;
+    const name2 = `rt:wi:${userId}`;
+    channelsRef.current.push(name1, name2);
+
+    const ch1 = supabase
+      .channel(name1)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'WishList', filter: `userId=eq.${userId}` },
+        () => { window.dispatchEvent(new CustomEvent('kinnect:wishlist-changed')); },
+      )
+      .subscribe();
+
+    const ch2 = supabase
+      .channel(name2)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'WishItem' },
+        () => { window.dispatchEvent(new CustomEvent('kinnect:wishlist-changed')); },
+      )
+      .subscribe();
+
+    return () => {
+      if (supabase) { supabase.removeChannel(ch1); supabase.removeChannel(ch2); }
+      channelsRef.current = channelsRef.current.filter((n) => n !== name1 && n !== name2);
+    };
+  }, [userId, authToken]);
+
   // ─── Cleanup all channels on unmount ───
   useEffect(() => {
     return () => {

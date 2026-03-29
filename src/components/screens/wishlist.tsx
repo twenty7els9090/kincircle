@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Gift, Trash2, ExternalLink, Eye, EyeOff,
+  Plus, Gift, Trash2, ExternalLink,
   ChevronRight, Info,
 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
@@ -21,6 +21,7 @@ interface WishItem {
   price: string | null;
   link: string | null;
   comment: string | null;
+  visibleTo: string | null;
   reservedBy: string | null;
   createdAt: string;
 }
@@ -118,7 +119,6 @@ function MyWishlist() {
   const [loading, setLoading] = useState(true);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showPublicToggle, setShowPublicToggle] = useState(false);
 
   // Fetch wishlist
   const fetchWishlist = useCallback(async () => {
@@ -141,21 +141,12 @@ function MyWishlist() {
     fetchWishlist();
   }, [fetchWishlist]);
 
-  // Realtime
+  // Realtime via CustomEvent from use-realtime.ts
   useEffect(() => {
-    if (!currentUser) return;
-    let cancelled = false;
-    const poll = () => {
-      if (cancelled) return;
-      fetchWishlist();
-      setTimeout(poll, 5000);
-    };
-    const interval = setTimeout(poll, 5000);
-    return () => {
-      cancelled = true;
-      clearTimeout(interval);
-    };
-  }, [currentUser, fetchWishlist]);
+    const handler = () => fetchWishlist();
+    window.addEventListener('kinnect:wishlist-changed', handler);
+    return () => window.removeEventListener('kinnect:wishlist-changed', handler);
+  }, [fetchWishlist]);
 
   // Clamp index
   useEffect(() => {
@@ -171,6 +162,7 @@ function MyWishlist() {
     price?: string;
     link?: string;
     comment?: string;
+    visibleTo?: string | null;
   }) => {
     if (!currentUser) return;
     setShowAddSheet(false);
@@ -210,25 +202,6 @@ function MyWishlist() {
       });
   };
 
-  // Toggle public
-  const handleTogglePublic = async () => {
-    if (!currentUser || !wishList) return;
-    const newVal = !wishList.isPublic;
-    try {
-      const res = await authFetch('/api/wishlist', {
-        method: 'POST',
-        body: JSON.stringify({ userId: currentUser.id, isPublic: newVal }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setWishList(data.wishList || wishList);
-        showToast(newVal ? 'Вишлист открыт для друзей' : 'Вишлист скрыт от друзей');
-      }
-    } catch {
-      showToast('Ошибка');
-    }
-  };
-
   const items = wishList?.items || [];
   const currentItem = items[currentIndex];
 
@@ -245,29 +218,6 @@ function MyWishlist() {
 
   return (
     <div className="relative">
-      {/* Public toggle */}
-      <div className="px-4 mb-3">
-        <button
-          onClick={handleTogglePublic}
-          className="flex items-center gap-2 px-3 py-2 rounded-full"
-          style={{
-            background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
-          }}
-        >
-          {wishList?.isPublic ? (
-            <Eye size={16} color="#007AFF" strokeWidth={2} />
-          ) : (
-            <EyeOff size={16} color="#8E8E93" strokeWidth={2} />
-          )}
-          <span
-            className="text-[13px] font-medium"
-            style={{ color: wishList?.isPublic ? '#007AFF' : '#8E8E93' }}
-          >
-            {wishList?.isPublic ? 'Видно друзьям' : 'Скрыт от друзей'}
-          </span>
-        </button>
-      </div>
-
       {items.length === 0 ? (
         /* ── Empty state ── */
         <div className="flex flex-col items-center justify-center px-8 py-16">
@@ -650,18 +600,12 @@ function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => vo
     fetchFriendsLists();
   }, [fetchFriendsLists]);
 
-  // Simple polling for friends
+  // Realtime via CustomEvent from use-realtime.ts
   useEffect(() => {
-    if (!currentUser) return;
-    let cancelled = false;
-    const poll = () => {
-      if (cancelled) return;
-      fetchFriendsLists();
-      setTimeout(poll, 8000);
-    };
-    const timer = setTimeout(poll, 8000);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [currentUser, fetchFriendsLists]);
+    const handler = () => fetchFriendsLists();
+    window.addEventListener('kinnect:wishlist-changed', handler);
+    return () => window.removeEventListener('kinnect:wishlist-changed', handler);
+  }, [fetchFriendsLists]);
 
   if (loading) {
     return (
