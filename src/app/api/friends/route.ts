@@ -33,7 +33,15 @@ export async function GET(request: NextRequest) {
         user: f.initiator,
       }));
 
-    return NextResponse.json({ friends, incoming });
+    // Sent requests — friendships where I am the initiator and status is pending
+    const sent = friendships
+      .filter((f) => f.userId === user.userId && f.status === 'pending')
+      .map((f) => ({
+        ...f,
+        user: f.recipient,
+      }));
+
+    return NextResponse.json({ friends, incoming, sent });
   } catch (err) {
     console.error('GET /api/friends error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

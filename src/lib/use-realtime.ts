@@ -3,21 +3,42 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
 import { supabase, setRealtimeAuth } from '@/lib/supabase';
-import { shouldSkipRefetch } from '@/lib/realtime-guard';
 
 type ChannelName = string;
 
 /**
- * Global Realtime subscriptions — mounted in ScreenRouter (always active after login).
- * Subscribes to Task, HouseMember, and Friendship changes.
- * All subscriptions use RLS-respecting filters.
- * On event → refetch via API → update Zustand store.
+ * Polling fallback for when Realtime is unavailable or RLS rejects subscriptions.
+ * Runs on an interval and refetches data from API.
+ */
+function usePolling(
+  enabled: boolean,
+  callback: () => void,
+  intervalMs: number = 5000
+) {
+  const savedCallback = useRef(callback);
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+  
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setInterval(() => {
+      savedCallback.current();
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [enabled, intervalMs]);
+}
+
+/**
+ * Global Realtime subscriptions + polling fallback.
+ * Tries Realtime first, polls every 5s as backup.
  */
 export function useRealtime() {
   const userId = useAppStore((s) => s.currentUser?.id);
   const houseId = useAppStore((s) => s.activeHouse?.id);
   const authToken = useAppStore((s) => s.authToken);
   const channelsRef = useRef<ChannelName[]>([]);
+  const [realtimeConnected, setRealtimeConnected] = useRef(false);
 
   // Set auth token on realtime connection
   useEffect(() => {
@@ -26,8 +47,7 @@ export function useRealtime() {
     }
   }, [authToken]);
 
-  // Refetch helpers — NO shouldSkipRefetch here!
-  // Realtime events come from OTHER users, we always want to refetch.
+  // ─── Refetch helpers ───
   const refetchTasks = useCallback(async () => {
     if (!houseId) return;
     try {
@@ -42,11 +62,12 @@ export function useRealtime() {
     try {
       const res = await fetchWithAuth(`/api/friends`);
       if (!res.ok) return;
-      const { friends, incoming } = await res.json();
+      const { friends, incoming, sent } = await res.json();
       window.dispatchEvent(new CustomEvent('kinnect:friends-updated', {
         detail: {
           friends: Array.isArray(friends) ? friends : [],
           incoming: Array.isArray(incoming) ? incoming : [],
+          sent: Array.isArray(sent) ? sent : [],
         },
       }));
     } catch { /* silent */ }
@@ -63,6 +84,13 @@ export function useRealtime() {
       }
     } catch { /* silent */ }
   }, [houseId]);
+
+  // ─── Polling fallback (always active when logged in) ───
+  usePolling(!!userId, () => {
+    refetchTasks();
+    refetchFriends();
+    refetchHouseMembers();
+  }, 5000);
 
   // ─── Task Realtime ───
   useEffect(() => {
@@ -81,13 +109,17 @@ export function useRealtime() {
           table: 'Task',
           filter: `houseId=eq.${houseId}`,
         },
-        (payload: any) => {
-          console.log('[Realtime] Task event:', payload.eventType, payload.new?.id);
-          setTimeout(refetchTasks, 300);
+        () => {
+          setTimeout(refetchTasks, 200);
         },
       )
       .subscribe((status) => {
-        console.log('[Realtime] Tasks channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          realtimeConnected.current = true;
+          console.log('[Realtime] Tasks: SUBSCRIBED');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('[Realtime] Tasks: CHANNEL_ERROR — polling will handle updates');
+        }
       });
 
     return () => {
@@ -112,14 +144,11 @@ export function useRealtime() {
           schema: 'public',
           table: 'TaskAssignee',
         },
-        (payload: any) => {
-          console.log('[Realtime] TaskAssignee event:', payload.eventType);
-          setTimeout(refetchTasks, 300);
+        () => {
+          setTimeout(refetchTasks, 200);
         },
       )
-      .subscribe((status) => {
-        console.log('[Realtime] TaskAssignee channel status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -144,17 +173,14 @@ export function useRealtime() {
           table: 'HouseMember',
           filter: `houseId=eq.${houseId}`,
         },
-        (payload: any) => {
-          console.log('[Realtime] HouseMember event:', payload.eventType);
+        () => {
           setTimeout(() => {
             refetchHouseMembers();
             refetchTasks();
-          }, 300);
+          }, 200);
         },
       )
-      .subscribe((status) => {
-        console.log('[Realtime] HouseMember channel status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -166,7 +192,6 @@ export function useRealtime() {
   useEffect(() => {
     if (!userId || !supabase) return;
 
-    // Channel: events where I sent a request
     const ch1Name = `friends-from:${userId}`;
     channelsRef.current.push(ch1Name);
     const ch1 = supabase
@@ -179,16 +204,12 @@ export function useRealtime() {
           table: 'Friendship',
           filter: `userId=eq.${userId}`,
         },
-        (payload: any) => {
-          console.log('[Realtime] Friendship (from) event:', payload.eventType);
-          setTimeout(refetchFriends, 300);
+        () => {
+          setTimeout(refetchFriends, 200);
         },
       )
-      .subscribe((status) => {
-        console.log('[Realtime] Friends-from channel status:', status);
-      });
+      .subscribe();
 
-    // Channel: events where I received a request
     const ch2Name = `friends-to:${userId}`;
     channelsRef.current.push(ch2Name);
     const ch2 = supabase
@@ -201,14 +222,11 @@ export function useRealtime() {
           table: 'Friendship',
           filter: `friendId=eq.${userId}`,
         },
-        (payload: any) => {
-          console.log('[Realtime] Friendship (to) event:', payload.eventType);
-          setTimeout(refetchFriends, 300);
+        () => {
+          setTimeout(refetchFriends, 200);
         },
       )
-      .subscribe((status) => {
-        console.log('[Realtime] Friends-to channel status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(ch1);
@@ -232,9 +250,6 @@ export function useRealtime() {
   }, []);
 }
 
-/**
- * Authenticated fetch helper using the store token.
- */
 async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   const token = useAppStore.getState().authToken;
   const headers = new Headers(init?.headers);
@@ -242,5 +257,4 @@ async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response>
   return fetch(url, { ...init, headers });
 }
 
-// Export for use in components
 export { fetchWithAuth };

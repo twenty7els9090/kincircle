@@ -23,6 +23,7 @@ export function ProfileScreen() {
   const [houses, setHouses] = useState<(House & { memberRole: string; memberCount: number })[]>([]);
   const [friends, setFriends] = useState<(User & { friendshipId: string })[]>([]);
   const [incoming, setIncoming] = useState<{ id: string; user: User }[]>([]);
+  const [sent, setSent] = useState<{ id: string; user: User }[]>([]);
 
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,11 +47,12 @@ export function ProfileScreen() {
       if (signal?.aborted) return;
       if (!housesRes.ok || !friendsRes.ok) throw new Error('Fetch failed');
       const { houses: h } = await housesRes.json();
-      const { friends: f, incoming: reqs } = await friendsRes.json();
+      const { friends: f, incoming: reqs, sent: sentReqs } = await friendsRes.json();
       if (signal?.aborted) return;
       setHouses(Array.isArray(h) ? h : []);
       setFriends(Array.isArray(f) ? f : []);
       setIncoming(Array.isArray(reqs) ? reqs : []);
+      setSent(Array.isArray(sentReqs) ? sentReqs : []);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
     }
@@ -59,6 +61,20 @@ export function ProfileScreen() {
   useEffect(() => {
     fetchProfileData();
   }, [fetchProfileData]);
+
+  // Listen for realtime/polling friend updates
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) {
+        if (detail.friends) setFriends(detail.friends);
+        if (detail.incoming) setIncoming(detail.incoming);
+        if (detail.sent) setSent(detail.sent);
+      }
+    };
+    window.addEventListener('kinnect:friends-updated', handler);
+    return () => window.removeEventListener('kinnect:friends-updated', handler);
+  }, []);
 
   if (!currentUser) return null;
 
@@ -106,6 +122,11 @@ export function ProfileScreen() {
         setSearchResults((prev) =>
           prev.map((u) => (u.id === friendId ? { ...u, friendshipStatus: 'pending' } : u))
         );
+        // Optimistically add to sent list
+        const searchUser = searchResults.find((u) => u.id === friendId);
+        if (searchUser) {
+          setSent((prev) => [...prev, { id: crypto.randomUUID(), user: { ...searchUser } }]);
+        }
       } else {
         const data = await res.json();
         showToast(data.error || 'Не удалось отправить');
@@ -355,6 +376,28 @@ export function ProfileScreen() {
         </div>
       )}
 
+      {/* Sent requests */}
+      {sent.length > 0 && (
+        <div className="px-4 mb-6">
+          <p className="ios-section-header mb-2 px-1">ОТПРАВЛЕННЫЕ ЗАПРОСЫ · {sent.length}</p>
+          <div className="ios-card">
+            {sent.map((req, i) => (
+              <div key={req.id}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{req.user.displayName}</span>
+                    {req.user.username && <span className="ios-meta">@{req.user.username}</span>}
+                  </div>
+                  <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#FFF8E1', color: '#B07800' }}>Ожидает</span>
+                </div>
+                {i < sent.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* My houses */}
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-2 px-1">
@@ -426,7 +469,7 @@ export function ProfileScreen() {
               {i < friends.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
             </div>
           ))}
-          {friends.length === 0 && incoming.length === 0 && (
+          {friends.length === 0 && incoming.length === 0 && sent.length === 0 && (
             <div className="px-4 py-4 text-center">
               <p className="ios-meta">Пока нет друзей</p>
             </div>
