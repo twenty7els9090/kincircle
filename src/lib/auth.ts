@@ -17,10 +17,11 @@ export interface JwtPayload {
 export async function generateJwt(userId: string): Promise<string> {
   const token = await new SignJWT({
     sub: userId,
+    aud: 'authenticated',            // Required by Supabase Realtime
     role: 'authenticated',
   })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
-    .setIssuer('supabase')          // Required for Supabase Realtime to accept our JWT
+    .setIssuer('supabase')           // Required for Supabase Realtime to accept our JWT
     .setIssuedAt()
     .setExpirationTime(TOKEN_EXPIRY)
     .sign(JWT_SECRET);

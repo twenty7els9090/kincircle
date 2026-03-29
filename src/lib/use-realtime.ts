@@ -1,68 +1,57 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import { shouldSkipRefetch } from '@/lib/realtime-guard';
+import { useAppStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 
 /**
- * Polling with smart guard.
- * - Friends: always refetch (no optimistic updates)
- * - Tasks: skip refetch for 3s after local action (avoids race with PATCH)
- */
-function usePolling(
-  enabled: boolean,
-  callback: () => void,
-  intervalMs: number = 3000
-) {
-  const savedCallback = useRef(callback);
-  useEffect(() => {
-    savedCallback.current = callback;
-  }, [callback]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    savedCallback.current();
-    const id = setInterval(() => {
-      savedCallback.current();
-    }, intervalMs);
-    return () => clearInterval(id);
-  }, [enabled, intervalMs]);
-}
-
-/**
- * Global polling — the only sync mechanism.
- * Realtime removed (custom JWT doesn't work with Supabase RLS for postgres_changes).
+ * Supabase Realtime — the ONLY sync mechanism. No polling.
  *
- * Strategy:
- * - Tasks: poll every 3s, but SKIP refetch if local action happened < 3s ago
- *   → prevents flicker when you toggle/delete a task
- *   → still picks up changes from other users within 3s
- * - Friends: always refetch (no optimistic updates, no race possible)
+ * How it works:
+ * 1. Set JWT token via supabase.realtime.setAuth(token)
+ * 2. Subscribe to postgres_changes on Task, TaskAssignee, HouseMember, Friendship
+ * 3. When DB changes → Realtime fires AFTER commit → client refetches
+ *
+ * Why there's no race condition with optimistic updates:
+ * - User clicks "Добавить" → optimistic UI update (isDone: true)
+ * - PATCH request → DB update → Realtime fires → client refetches
+ * - Refetch returns isDone: true → no change → no flicker ✅
+ *
+ * Requirements:
+ * - RLS policies must use auth.jwt()->>'sub' (NOT auth.uid() which returns UUID)
+ * - JWT must have: sub, aud='authenticated', role='authenticated', iss='supabase'
+ * - Tables must be in supabase_realtime publication
+ * - See fix-realtime-rls.sql for the SQL fix
  */
 export function useRealtime() {
   const userId = useAppStore((s) => s.currentUser?.id);
+  const houseId = useAppStore((s) => s.activeHouse?.id);
   const authToken = useAppStore((s) => s.authToken);
+  const channelsRef = useRef<string[]>([]);
 
-  // ─── Refetch: tasks (with local-action guard) ───
+  // ─── Step 1: Set JWT auth token on Realtime connection ───
+  // MUST run before any channel subscriptions
+  useEffect(() => {
+    if (!authToken || !supabase) return;
+    supabase.realtime.setAuth(authToken);
+  }, [authToken]);
+
+  // ─── Step 2: Refetch helpers ───
   const refetchTasks = useCallback(async () => {
-    // Skip if user just did something — avoid overwriting optimistic update
-    if (shouldSkipRefetch()) return;
-
-    const currentHouseId = useAppStore.getState().activeHouse?.id;
-    if (!currentHouseId) return;
+    const hid = useAppStore.getState().activeHouse?.id;
+    if (!hid) return;
     try {
       const token = useAppStore.getState().authToken;
       if (!token) return;
-      const res = await fetch(`/api/tasks?houseId=${currentHouseId}`, {
+      const res = await fetch(`/api/tasks?houseId=${hid}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
       const data = await res.json();
-      const t = data?.tasks;
-      if (Array.isArray(t)) useAppStore.getState().setTasks(t);
+      if (Array.isArray(data?.tasks)) useAppStore.getState().setTasks(data.tasks);
     } catch { /* silent */ }
   }, []);
 
-  // ─── Refetch: friends (always, no guard) ───
   const refetchFriends = useCallback(async () => {
     try {
       const token = useAppStore.getState().authToken;
@@ -82,12 +71,129 @@ export function useRealtime() {
     } catch { /* silent */ }
   }, []);
 
-  // ─── Poll everything ───
-  usePolling(!!userId && !!authToken, () => {
-    refetchTasks();
-    refetchFriends();
-  }, 3000);
-}
+  // ─── Step 3: Subscribe to Task changes ───
+  useEffect(() => {
+    if (!userId || !houseId || !authToken || !supabase) return;
 
-// Need this for store access
-import { useAppStore } from '@/lib/store';
+    const name = `rt:task:${houseId}`;
+    channelsRef.current.push(name);
+
+    const channel = supabase
+      .channel(name)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'Task', filter: `houseId=eq.${houseId}` },
+        () => { setTimeout(refetchTasks, 200); },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log(`[RT] ${name}: SUBSCRIBED ✓`);
+        else if (status === 'CHANNEL_ERROR') console.error(`[RT] ${name}: CHANNEL_ERROR ✗`);
+        else if (status === 'TIMED_OUT') console.error(`[RT] ${name}: TIMED_OUT ✗`);
+      });
+
+    return () => {
+      if (supabase) supabase.removeChannel(channel);
+      channelsRef.current = channelsRef.current.filter((n) => n !== name);
+    };
+  }, [userId, houseId, authToken, refetchTasks]);
+
+  // ─── Step 4: Subscribe to TaskAssignee changes ───
+  useEffect(() => {
+    if (!userId || !houseId || !authToken || !supabase) return;
+
+    const name = `rt:ta:${houseId}`;
+    channelsRef.current.push(name);
+
+    const channel = supabase
+      .channel(name)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'TaskAssignee' },
+        () => { setTimeout(refetchTasks, 200); },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log(`[RT] ${name}: SUBSCRIBED ✓`);
+        else if (status === 'CHANNEL_ERROR') console.error(`[RT] ${name}: CHANNEL_ERROR ✗`);
+      });
+
+    return () => {
+      if (supabase) supabase.removeChannel(channel);
+      channelsRef.current = channelsRef.current.filter((n) => n !== name);
+    };
+  }, [userId, houseId, authToken, refetchTasks]);
+
+  // ─── Step 5: Subscribe to HouseMember changes ───
+  useEffect(() => {
+    if (!userId || !houseId || !authToken || !supabase) return;
+
+    const name = `rt:hm:${houseId}`;
+    channelsRef.current.push(name);
+
+    const channel = supabase
+      .channel(name)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'HouseMember', filter: `houseId=eq.${houseId}` },
+        () => { setTimeout(refetchTasks, 200); },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log(`[RT] ${name}: SUBSCRIBED ✓`);
+        else if (status === 'CHANNEL_ERROR') console.error(`[RT] ${name}: CHANNEL_ERROR ✗`);
+      });
+
+    return () => {
+      if (supabase) supabase.removeChannel(channel);
+      channelsRef.current = channelsRef.current.filter((n) => n !== name);
+    };
+  }, [userId, houseId, authToken, refetchTasks]);
+
+  // ─── Step 6: Subscribe to Friendship changes ───
+  useEffect(() => {
+    if (!userId || !authToken || !supabase) return;
+
+    const name1 = `rt:fr:${userId}`;
+    const name2 = `rt:ft:${userId}`;
+    channelsRef.current.push(name1, name2);
+
+    const ch1 = supabase
+      .channel(name1)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'Friendship', filter: `userId=eq.${userId}` },
+        () => { setTimeout(refetchFriends, 200); },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log(`[RT] ${name1}: SUBSCRIBED ✓`);
+        else if (status === 'CHANNEL_ERROR') console.error(`[RT] ${name1}: CHANNEL_ERROR ✗`);
+      });
+
+    const ch2 = supabase
+      .channel(name2)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'Friendship', filter: `friendId=eq.${userId}` },
+        () => { setTimeout(refetchFriends, 200); },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log(`[RT] ${name2}: SUBSCRIBED ✓`);
+        else if (status === 'CHANNEL_ERROR') console.error(`[RT] ${name2}: CHANNEL_ERROR ✗`);
+      });
+
+    return () => {
+      if (supabase) { supabase.removeChannel(ch1); supabase.removeChannel(ch2); }
+      channelsRef.current = channelsRef.current.filter((n) => n !== name1 && n !== name2);
+    };
+  }, [userId, authToken, refetchFriends]);
+
+  // ─── Cleanup all channels on unmount ───
+  useEffect(() => {
+    return () => {
+      if (supabase) {
+        for (const name of channelsRef.current) {
+          supabase.removeChannel(name);
+        }
+        channelsRef.current = [];
+      }
+    };
+  }, []);
+}
