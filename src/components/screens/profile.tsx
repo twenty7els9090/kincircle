@@ -122,11 +122,8 @@ export function ProfileScreen() {
         setSearchResults((prev) =>
           prev.map((u) => (u.id === friendId ? { ...u, friendshipStatus: 'pending' } : u))
         );
-        // Optimistically add to sent list
-        const searchUser = searchResults.find((u) => u.id === friendId);
-        if (searchUser) {
-          setSent((prev) => [...prev, { id: crypto.randomUUID(), user: { ...searchUser } }]);
-        }
+        // No optimistic add to sent — Realtime refetch will update it within ~200ms
+        // Optimistic add with random UUID caused duplicates
       } else {
         const data = await res.json();
         showToast(data.error || 'Не удалось отправить');
