@@ -4,10 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Gift, Trash2, ExternalLink,
-  ChevronRight,
+  ChevronRight, Users, Lock,
 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
-import { SegmentedControl } from '@/components/shared/segmented-control';
 import { AddWishSheet } from '@/components/shared/add-wish-sheet';
 import { setFriendWishlistUserId } from '@/components/screens/friend-wishlist';
 
@@ -66,28 +65,31 @@ const SWIPE_THRESHOLD = 60;
 
 export function WishlistScreen() {
   const { currentUser, darkMode, pushScreen, showToast } = useAppStore();
-  const [tab, setTab] = useState<'mine' | 'friends'>('mine');
+  const [view, setView] = useState<'own' | 'friends'>('own');
 
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
-      <div className="shrink-0 px-4 pt-[60px] pb-2">
-        <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Вишлист</h1>
+      {/* Header with friends button */}
+      <div className="shrink-0 flex items-center justify-between px-4 pt-[58px] pb-1">
+        <div className="w-10" />
+        <button
+          onClick={() => { setView(view === 'own' ? 'friends' : 'own'); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full active:opacity-70 transition-opacity"
+          style={{ background: 'var(--ios-toggle-bg)' }}
+        >
+          <Users size={16} style={{ color: 'var(--ios-text-secondary)' }} />
+          <span className="text-[13px] font-medium" style={{ color: 'var(--ios-text-secondary)' }}>Друзья</span>
+        </button>
+        <div className="w-10" />
       </div>
-      <div className="shrink-0 px-4 mt-2 mb-4">
-        <SegmentedControl
-          options={['Мои желания', 'Друзья']}
-          selected={tab === 'mine' ? 'Мои желания' : 'Друзья'}
-          onSelect={(v) => setTab(v === 'Мои желания' ? 'mine' : 'friends')}
-          dark={darkMode}
-        />
-      </div>
+
       <AnimatePresence mode="wait">
-        {tab === 'mine' ? (
-          <motion.div key="mine" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} className="flex-1">
+        {view === 'own' ? (
+          <motion.div key="own" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1">
             <MyWishlist />
           </motion.div>
         ) : (
-          <motion.div key="friends" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="flex-1">
+          <motion.div key="friends" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1">
             <FriendsWishlists onFriendPress={(friendId) => { setFriendWishlistUserId(friendId); pushScreen('friend-wishlist'); }} />
           </motion.div>
         )}
@@ -106,6 +108,7 @@ function MyWishlist() {
   const [loading, setLoading] = useState(true);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState<'left' | 'right'>('left');
 
   const fetchWishlist = useCallback(async () => {
     if (!currentUser) return;
@@ -127,6 +130,12 @@ function MyWishlist() {
     if (wishList.items.length === 0) setCurrentIndex(0);
     else if (currentIndex >= wishList.items.length) setCurrentIndex(wishList.items.length - 1);
   }, [wishList?.items.length, currentIndex]);
+
+  const goToIndex = (i: number) => {
+    if (i < 0 || i >= (wishList?.items.length || 0) || i === currentIndex) return;
+    setDirection(i > currentIndex ? 'left' : 'right');
+    setCurrentIndex(i);
+  };
 
   const handleAddItem = async (item: { title: string; photoUrl?: string; price?: string; link?: string; comment?: string; visibleTo?: string | null }) => {
     if (!currentUser) return;
@@ -154,39 +163,60 @@ function MyWishlist() {
   return (
     <div className="relative">
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-8 py-16">
-          <div className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-4" style={{ background: darkMode ? '#2C2C2E' : '#F2F2F7' }}>
-            <Gift size={36} color="#8E8E93" strokeWidth={1.2} />
-          </div>
-          <p className="text-[17px] font-semibold mb-1" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>Список пуст</p>
-          <p className="ios-meta text-center mb-6">Добавьте желания, чтобы ваши друзья знали, что вам подарить</p>
-          <button onClick={() => setShowAddSheet(true)} className="flex items-center gap-2 px-6 py-3 rounded-full" style={{ background: '#007AFF' }}>
-            <Plus size={20} color="white" strokeWidth={2.5} />
-            <span className="text-white text-[15px] font-semibold">Добавить желание</span>
-          </button>
+        <div className="flex flex-col items-center justify-center px-8 pt-20">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <p className="text-[36px] font-black text-center leading-[1.1] tracking-tight" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
+              Все!
+            </p>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+            <p className="text-[28px] font-bold text-center leading-[1.1] mt-2" style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}>
+              Чего,
+            </p>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
+            <div className="flex items-center gap-2 mt-2">
+              <p className="text-[28px] font-bold leading-[1.1]" style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}>
+                Хочу я!
+              </p>
+              <button
+                onClick={() => setShowAddSheet(true)}
+                className="w-[44px] h-[44px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                style={{ background: '#007AFF' }}
+              >
+                <Plus size={22} color="white" strokeWidth={2.5} />
+              </button>
+            </div>
+          </motion.div>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.5 }} className="ios-meta text-center mt-6">
+            Добавьте желания, чтобы друзья знали, что вам подарить
+          </motion.p>
         </div>
       ) : (
         <div className="flex flex-col items-center px-4 mt-2">
-          <OwnCardStack items={items} currentIndex={currentIndex} onIndexChange={setCurrentIndex} onDelete={handleDeleteItem} dark={darkMode} />
-          <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={setCurrentIndex} />
+          <OwnCardStack items={items} currentIndex={currentIndex} onIndexChange={goToIndex} onDelete={handleDeleteItem} dark={darkMode} direction={direction} />
+          <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={goToIndex} />
         </div>
       )}
+
+      {/* FAB */}
       {items.length > 0 && (
         <button onClick={() => setShowAddSheet(true)} className="fixed bottom-24 right-4 w-[56px] h-[56px] rounded-full flex items-center justify-center z-[60] shadow-lg active:scale-95 transition-transform" style={{ background: '#007AFF' }}>
           <Plus size={28} color="white" strokeWidth={2.5} />
         </button>
       )}
+
       <AddWishSheet open={showAddSheet} onClose={() => setShowAddSheet(false)} onAdd={handleAddItem} />
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   Own Card Stack — one solid card, all info overlaid
+   Own Card Stack — one solid card, animated transitions
    ═══════════════════════════════════════════════════════ */
 
-function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark }: {
-  items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; onDelete: (id: string) => void; dark?: boolean;
+function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, direction }: {
+  items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; onDelete: (id: string) => void; dark?: boolean; direction: 'left' | 'right';
 }) {
   const touchStartX = useRef(0);
   const [swipeDelta, setSwipeDelta] = useState(0);
@@ -208,6 +238,14 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark }: {
 
   const formattedPrice = formatPrice(currentItem.price);
   const color = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
+  const isReserved = currentItem.reservedBy === '__reserved__';
+
+  // Slide animation variants
+  const slideVariants = {
+    enter: (d: 'left' | 'right') => ({ x: d === 'left' ? 300 : -300, opacity: 0.5 }),
+    center: { x: 0, opacity: 1 },
+    exit: (d: 'left' | 'right') => ({ x: d === 'left' ? -300 : 300, opacity: 0.5 }),
+  };
 
   return (
     <>
@@ -233,106 +271,96 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark }: {
           }} />
         )}
 
-        {/* ─── Card (ONE surface) ─── */}
-        <motion.div
-          className="absolute rounded-[24px] overflow-hidden"
-          style={{
-            top: 0, left: 0, right: 0, height: CARD_HEIGHT,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          }}
-          animate={{ x: swipeDelta }}
-          transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* Full background: image or color */}
-          <div className="absolute inset-0" style={{ background: color }}>
-            {currentItem.photoUrl ? (
-              <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
+        {/* ─── Card (ONE surface) with animated transitions ─── */}
+        <AnimatePresence mode="popLayout" custom={direction}>
+          <motion.div
+            key={currentItem.id}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="absolute rounded-[24px] overflow-hidden"
+            style={{
+              top: 0, left: 0, right: 0, height: CARD_HEIGHT,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.4}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
+              else if (info.offset.x > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Full background: image or color */}
+            <div className="absolute inset-0" style={{ background: color }}>
+              {currentItem.photoUrl ? (
+                <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
+                </div>
+              )}
+            </div>
+
+            {/* Bottom gradient for text readability */}
+            <div className="absolute inset-x-0 bottom-0" style={{
+              height: '75%',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.15) 65%, transparent 100%)',
+            }} />
+
+            {/* ── Reserved badge top-left ── */}
+            {isReserved && (
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full z-10" style={{ background: 'rgba(255,149,0,0.9)' }}>
+                <Lock size={12} color="white" strokeWidth={2} />
+                <span className="text-[12px] font-semibold text-white">Забронировано</span>
               </div>
             )}
-          </div>
 
-          {/* Bottom gradient for text readability */}
-          <div className="absolute inset-x-0 bottom-0" style={{
-            height: '75%',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.15) 65%, transparent 100%)',
-          }} />
+            {/* ── Trash button top-right ── */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
+              className="absolute top-3 right-3 w-[36px] h-[36px] rounded-full flex items-center justify-center active:scale-90 transition-transform z-10"
+              style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+            >
+              <Trash2 size={17} color="white" strokeWidth={2} />
+            </button>
 
-          {/* ── Trash button top-right ── */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
-            className="absolute top-3 right-3 w-[36px] h-[36px] rounded-full flex items-center justify-center active:scale-90 transition-transform z-10"
-            style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-          >
-            <Trash2 size={17} color="white" strokeWidth={2} />
-          </button>
-
-          {/* ── All text overlaid on card ── */}
-          <div className="absolute inset-x-0 bottom-0 p-5 pb-6 flex flex-col gap-2">
-            {/* Title */}
-            <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">
-              {currentItem.title}
-            </p>
-
-            {/* Price */}
-            {formattedPrice && (
-              <p className="text-[15px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                {formattedPrice}
-              </p>
-            )}
-
-            {/* Link */}
-            {currentItem.link && (
-              <a
-                href={currentItem.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium mt-0.5"
-                style={{ color: 'rgba(255,255,255,0.75)' }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink size={13} strokeWidth={2} />
-                Открыть ссылку
-              </a>
-            )}
-
-            {/* Comment */}
-            {currentItem.comment && (
-              <p className="text-[13px] leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                {currentItem.comment}
-              </p>
-            )}
-
-            {/* Visibility hint */}
-            {currentItem.visibleTo && (
-              <p className="text-[12px] mt-0.5" style={{ color: '#FFCC00' }}>
-                👁 Видно только одному человеку
-              </p>
-            )}
-          </div>
-        </motion.div>
+            {/* ── All text overlaid on card ── */}
+            <div className="absolute inset-x-0 bottom-0 p-5 pb-6 flex flex-col gap-2">
+              <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
+              {formattedPrice && <p className="text-[15px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
+              {currentItem.link && (
+                <a href={currentItem.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[13px] font-medium mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }} onClick={(e) => e.stopPropagation()}>
+                  <ExternalLink size={13} strokeWidth={2} /> Открыть ссылку
+                </a>
+              )}
+              {currentItem.comment && (
+                <p className="text-[13px] leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>{currentItem.comment}</p>
+              )}
+              {currentItem.visibleTo && (
+                <p className="text-[12px] mt-0.5" style={{ color: '#FFCC00' }}>👁 Видно только одному человеку</p>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Delete confirmation */}
       <AnimatePresence>
         {showDelete && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center px-8"
-            style={{ background: 'rgba(0,0,0,0.4)' }}
-            onClick={() => setShowDelete(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+            style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDelete(false)}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
               className="w-full max-w-[300px] rounded-[14px] p-5 text-center"
               style={{ background: dark ? '#2C2C2E' : '#ffffff', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
+              onClick={(e) => e.stopPropagation()}>
               <div className="w-[48px] h-[48px] rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: '#FFF0F0' }}>
                 <Trash2 size={22} color="#FF3B30" strokeWidth={2} />
               </div>
@@ -439,7 +467,7 @@ function DotsIndicator({ total, current, dark, onDotPress }: { total: number; cu
   return (
     <div className="flex items-center justify-center gap-[6px] py-4">
       {Array.from({ length: total }).map((_, i) => (
-        <button key={i} onClick={() => onDotPress?.(i)} className="rounded-full transition-colors duration-200" style={{ width: 5, height: 5, background: i === current ? '#007AFF' : dark ? '#636366' : '#C7C7CC' }} />
+        <button key={i} onClick={() => onDotPress?.(i)} className="rounded-full transition-all duration-300" style={{ width: i === current ? 18 : 5, height: 5, borderRadius: 3, background: i === current ? '#007AFF' : dark ? '#636366' : '#C7C7CC' }} />
       ))}
     </div>
   );

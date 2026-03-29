@@ -54,6 +54,7 @@ export function FriendWishlistScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [reserving, setReserving] = useState<string | null>(null);
+  const [direction, setDirection] = useState<'left' | 'right'>('left');
 
   const friendId = _friendWishlistUserId;
 
@@ -71,6 +72,12 @@ export function FriendWishlistScreen() {
     if (items.length === 0) setCurrentIndex(0);
     else if (currentIndex >= items.length) setCurrentIndex(items.length - 1);
   }, [items.length, currentIndex]);
+
+  const goToIndex = (i: number) => {
+    if (i < 0 || i >= items.length || i === currentIndex) return;
+    setDirection(i > currentIndex ? 'left' : 'right');
+    setCurrentIndex(i);
+  };
 
   const handleReserve = async (itemId: string, action: 'reserve' | 'unreserve') => {
     if (!currentUser) return;
@@ -107,10 +114,10 @@ export function FriendWishlistScreen() {
       ) : (
         <div className="flex flex-col items-center px-4 mt-4">
           <FriendCardStack
-            items={items} currentIndex={currentIndex} onIndexChange={setCurrentIndex}
-            dark={darkMode} currentUserId={currentUser?.id || ''} onReserve={handleReserve} reserving={reserving}
+            items={items} currentIndex={currentIndex} onIndexChange={goToIndex}
+            dark={darkMode} currentUserId={currentUser?.id || ''} onReserve={handleReserve} reserving={reserving} direction={direction}
           />
-          <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={setCurrentIndex} />
+          <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={goToIndex} />
         </div>
       )}
     </div>
@@ -121,9 +128,9 @@ export function FriendWishlistScreen() {
    Friend Card Stack — one solid card, all info overlaid
    ═══════════════════════════════════════════════════════ */
 
-function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUserId, onReserve, reserving }: {
+function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUserId, onReserve, reserving, direction }: {
   items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; dark?: boolean;
-  currentUserId: string; onReserve: (id: string, action: 'reserve' | 'unreserve') => void; reserving: string | null;
+  currentUserId: string; onReserve: (id: string, action: 'reserve' | 'unreserve') => void; reserving: string | null; direction: 'left' | 'right';
 }) {
   const touchStartX = useRef(0);
   const [swipeDelta, setSwipeDelta] = useState(0);
@@ -169,12 +176,24 @@ function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUser
         }} />
       )}
 
-      {/* ─── Card (ONE surface) ─── */}
+      {/* ─── Card (ONE surface) with animated transitions ─── */}
+      <AnimatePresence mode="popLayout" custom={direction}>
       <motion.div
+        key={currentItem.id}
+        custom={direction}
+        initial={{ x: direction === 'left' ? 300 : -300, opacity: 0.5 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: direction === 'left' ? -300 : 300, opacity: 0.5 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className="absolute rounded-[24px] overflow-hidden"
         style={{ top: 0, left: 0, right: 0, height: CARD_HEIGHT, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
-        animate={{ x: swipeDelta }}
-        transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.4}
+        onDragEnd={(_, info) => {
+          if (info.offset.x < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
+          else if (info.offset.x > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -246,6 +265,7 @@ function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUser
           </div>
         </div>
       </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -259,7 +279,7 @@ function DotsIndicator({ total, current, dark, onDotPress }: { total: number; cu
   return (
     <div className="flex items-center justify-center gap-[6px] py-4">
       {Array.from({ length: total }).map((_, i) => (
-        <button key={i} onClick={() => onDotPress?.(i)} className="rounded-full transition-colors duration-200" style={{ width: 5, height: 5, background: i === current ? '#007AFF' : dark ? '#636366' : '#C7C7CC' }} />
+        <button key={i} onClick={() => onDotPress?.(i)} className="rounded-full transition-all duration-300" style={{ width: i === current ? 18 : 5, height: 5, borderRadius: 3, background: i === current ? '#007AFF' : dark ? '#636366' : '#C7C7CC' }} />
       ))}
     </div>
   );

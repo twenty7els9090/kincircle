@@ -264,7 +264,7 @@ function AddWishSheetInner({ onAdd }: { onAdd: AddWishSheetProps['onAdd'] }) {
           ref={cameraInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
+          capture="user"
           className="hidden"
           onChange={handleFileSelect}
         />

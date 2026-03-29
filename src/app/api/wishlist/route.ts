@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // For the owner's own wishlist, NEVER return reservedBy — always set to null
+    // For the owner: show reservation status (masked, not actual userId)
     if (user.userId === userId) {
       const sanitizedItems = wishList.items.map((item) => ({
         ...item,
-        reservedBy: null,
+        reservedBy: item.reservedBy ? '__reserved__' : null,
       }));
       return NextResponse.json({
         wishList: { ...wishList, items: sanitizedItems },
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
       include: { items: { orderBy: { createdAt: 'desc' } } },
     });
 
-    // Sanitize reservedBy for owner
+    // Mask reservedBy for owner
     const sanitizedItems = wishList.items.map((item) => ({
       ...item,
-      reservedBy: null,
+      reservedBy: item.reservedBy ? '__reserved__' : null,
     }));
 
     return NextResponse.json({
