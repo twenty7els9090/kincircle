@@ -211,9 +211,9 @@ function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUser
 
           {/* ── All text overlaid ── */}
           <div className="absolute inset-x-0 bottom-0 p-5 pb-5 flex flex-col gap-2">
-            <div className="flex items-baseline gap-3">
-              <p className="text-[22px] font-bold leading-tight text-white drop-shadow-sm flex-1 min-w-0">{currentItem.title}</p>
-              {formattedPrice && <p className="text-[20px] font-bold shrink-0" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+              <p className="text-[22px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
+              {formattedPrice && <p className="text-[20px] font-bold leading-tight" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
             </div>
             {currentItem.comment && (
               <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{currentItem.comment}</p>
