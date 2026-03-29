@@ -31,7 +31,7 @@ export function setFriendWishlistUserId(id: string | null) {
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 280;
+const CARD_HEIGHT = 360;
 const SWIPE_THRESHOLD = 50;
 
 /* ═══════════════════════════════════════════════════════
@@ -288,16 +288,10 @@ function ReadOnlyCardStack({
 
       {/* Top card */}
       <motion.div
-        className="absolute rounded-[20px] overflow-hidden"
+        className="absolute rounded-[24px] overflow-hidden"
         style={{
-          top: 0,
-          left: 0,
-          right: 0,
-          height: CARD_HEIGHT,
-          background: dark ? '#1C1C1E' : '#ffffff',
-          border: dark
-            ? '0.5px solid rgba(255,255,255,0.08)'
-            : '0.5px solid rgba(0,0,0,0.08)',
+          top: 0, left: 0, right: 0, height: CARD_HEIGHT,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
         }}
         animate={{ x: swipeDelta }}
         transition={{ type: 'spring', stiffness: 500, damping: 40 }}
@@ -305,13 +299,11 @@ function ReadOnlyCardStack({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Photo area */}
+        {/* Full image */}
         <div
+          className="absolute inset-0"
           style={{
-            height: 160,
-            width: '100%',
-            background:
-              PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length],
+            background: PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length],
           }}
         >
           {currentItem.photoUrl ? (
@@ -321,22 +313,28 @@ function ReadOnlyCardStack({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <Gift size={32} color="rgba(0,0,0,0.15)" />
+            <div className="w-full h-full flex items-center justify-center">
+              <Gift size={48} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
             </div>
           )}
         </div>
 
-        {/* Content preview */}
-        <div className="p-4">
-          <p
-            className="text-[15px] font-semibold leading-snug"
-            style={{ color: dark ? '#F5F5F7' : '#1C1C1E' }}
-          >
+        {/* Gradient overlay */}
+        <div
+          className="absolute inset-x-0 bottom-0"
+          style={{
+            height: '55%',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+          }}
+        />
+
+        {/* Text on image */}
+        <div className="absolute inset-x-0 bottom-0 p-5">
+          <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">
             {currentItem.title}
           </p>
           {currentItem.price && (
-            <p className="text-[13px] mt-1" style={{ color: '#8E8E93' }}>
+            <p className="text-[15px] mt-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>
               {currentItem.price}
             </p>
           )}
