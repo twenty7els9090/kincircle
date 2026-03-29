@@ -1,0 +1,171 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-ios-blue: #007AFF;
+  --color-ios-green: #34C759;
+  --color-ios-red: #FF3B30;
+  --color-ios-gray: #8E8E93;
+  --color-ios-tertiary: #C7C7CC;
+  --color-ios-bg: #F2F2F7;
+  --color-ios-separator: rgba(0,0,0,0.06);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --ios-bg: #F2F2F7;
+  --ios-card-bg: #FFFFFF;
+  --ios-text-primary: #1C1C1E;
+  --ios-text-secondary: #8E8E93;
+  --ios-text-tertiary: #C7C7CC;
+  --ios-input-bg: #FFFFFF;
+  --ios-input-border: rgba(0,0,0,0.06);
+  --ios-separator-color: rgba(0,0,0,0.06);
+  --ios-toggle-bg: #E5E5EA;
+  --ios-meta: #8E8E93;
+  --ios-section-header: #8E8E93;
+  --ios-blue-bg: #E8F0FE;
+  --ios-red-bg: #FFF0F0;
+  --ios-tab-bg: rgba(255,255,255,0.85);
+  --ios-dialog-bg: rgba(255,255,255,0.95);
+  --ios-input-placeholder: #C7C7CC;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --ios-bg: #1C1C1E;
+  --ios-card-bg: #2C2C2E;
+  --ios-text-primary: #F5F5F7;
+  --ios-text-secondary: #8E8E93;
+  --ios-text-tertiary: #636366;
+  --ios-input-bg: #2C2C2E;
+  --ios-input-border: rgba(255,255,255,0.1);
+  --ios-separator-color: rgba(255,255,255,0.08);
+  --ios-toggle-bg: #3A3A3C;
+  --ios-meta: #8E8E93;
+  --ios-section-header: #8E8E93;
+  --ios-blue-bg: rgba(0,122,255,0.2);
+  --ios-red-bg: rgba(255,59,48,0.15);
+  --ios-tab-bg: rgba(44,44,46,0.85);
+  --ios-dialog-bg: rgba(44,44,46,0.95);
+  --ios-input-placeholder: #636366;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+  input, textarea {
+    user-select: text;
+  }
+}
+
+@layer utilities {
+  .ios-large-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  .ios-nav-title {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .ios-body {
+    font-size: 15px;
+    font-weight: 400;
+  }
+  .ios-meta {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ios-meta);
+  }
+  .ios-section-header {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ios-section-header);
+  }
+  .ios-card {
+    background: var(--ios-card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .ios-separator {
+    height: 0.5px;
+    background: var(--ios-separator-color);
+  }
+  .ios-primary-btn {
+    background: #007AFF;
+    color: white;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .ios-primary-btn:active {
+    opacity: 0.7;
+  }
+  .ios-danger-btn {
+    background: transparent;
+    color: #FF3B30;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    border: 0.5px solid rgba(255,59,48,0.3);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .ios-danger-btn:active {
+    opacity: 0.7;
+  }
+  .ios-input {
+    width: 100%;
+    height: 44px;
+    border: 0.5px solid var(--ios-input-border);
+    border-radius: 10px;
+    background: var(--ios-input-bg);
+    padding: 0 16px;
+    font-size: 15px;
+    color: var(--ios-text-primary);
+    outline: none;
+  }
+  .ios-input::placeholder {
+    color: var(--ios-input-placeholder);
+  }
+  .ios-input:focus {
+    box-shadow: 0 0 0 2px rgba(0,122,255,0.3);
+    border-color: rgba(0,122,255,0.3);
+  }
+}

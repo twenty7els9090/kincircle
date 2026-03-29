@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  username    String?
+  displayName String   @default("")
+  avatarUrl   String?
+  friendCode  String   @unique @default("")
+  createdAt   DateTime @default(now()) @map("createdAt")
+  updatedAt   DateTime? @updatedAt @map("updatedAt")
+
+  friendshipsInitiated  Friendship[]  @relation("FriendshipInitiator")
+  friendshipsReceived   Friendship[]  @relation("FriendshipRecipient")
+  housesOwned           House[]       @relation("HouseOwner")
+  houseMemberships      HouseMember[]
+  tasksCreated          Task[]        @relation("TaskCreator")
+  tasksCompleted        Task[]        @relation("TaskCompleter")
+  taskAssignments       TaskAssignee[]
+
+  @@map("User")
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("createdAt")
+
+  initiator User @relation("FriendshipInitiator", fields: [userId], references: [id], onDelete: Cascade)
+  recipient User @relation("FriendshipRecipient", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+  @@index([status])
+  @@index([userId, status])
+  @@map("Friendship")
+}
+
+model House {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now()) @map("createdAt")
+
+  owner   User          @relation("HouseOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members HouseMember[]
+  tasks   Task[]
+
+  @@index([ownerId])
+  @@map("House")
+}
+
+model HouseMember {
+  id       String   @id @default(cuid())
+  houseId  String
+  userId   String
+  role     String   @default("member")
+  joinedAt DateTime @default(now()) @map("joinedAt")
+
+  house House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([houseId, userId])
+  @@index([houseId])
+  @@index([userId])
+  @@index([houseId, userId])
+  @@map("HouseMember")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  houseId     String
+  createdBy   String
+  title       String
+  category    String
+  description String?
+  quantity    String?
+  unit        String?
+  dueDate     String?
+  dueTime     String?
+  isDone      Boolean  @default(false)
+  completedBy String?
+  createdAt   DateTime @default(now()) @map("createdAt")
+  updatedAt   DateTime? @updatedAt @map("updatedAt")
+
+  house      House         @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  creator    User          @relation("TaskCreator", fields: [createdBy], references: [id])
+  completer  User?         @relation("TaskCompleter", fields: [completedBy], references: [id], onDelete: SetNull)
+  assignees  TaskAssignee[]
+
+  @@index([houseId, isDone, createdAt(sort: Desc)])
+  @@index([createdBy])
+  @@index([houseId])
+  @@index([category])
+  @@map("Task")
+}
+
+model TaskAssignee {
+  id     String @id @default(cuid())
+  taskId  String
+  userId  String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+  @@index([taskId, userId])
+  @@map("TaskAssignee")
+}
