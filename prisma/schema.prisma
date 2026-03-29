@@ -25,6 +25,8 @@ model User {
   taskAssignments       TaskAssignee[]
   groupInvitesSent      GroupInvite[]    @relation("InviteSender")
   groupInvitesReceived  GroupInvite[]    @relation("InviteRecipient")
+  wishList               WishList?
+  reservedItems          WishItem[]       @relation("WishItemReserver")
 
   @@map("User")
 }
@@ -137,4 +139,34 @@ model GroupInvite {
   @@index([userId, status])
   @@index([houseId, status])
   @@map("GroupInvite")
+}
+
+model WishList {
+  id        String     @id @default(uuid())
+  userId    String
+  isPublic  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishItem[]
+
+  @@unique([userId])
+  @@map("WishList")
+}
+
+model WishItem {
+  id          String    @id @default(uuid())
+  wishListId  String
+  title       String
+  photoUrl    String?
+  price       String?
+  link        String?
+  comment     String?
+  reservedBy  String?
+  createdAt   DateTime  @default(now())
+
+  wishList    WishList  @relation(fields: [wishListId], references: [id], onDelete: Cascade)
+  reserver    User?     @relation("WishItemReserver", fields: [reservedBy], references: [id], onDelete: SetNull)
+
+  @@map("WishItem")
 }

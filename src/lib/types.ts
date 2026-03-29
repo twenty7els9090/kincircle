@@ -54,6 +54,8 @@ export type Screen =
   | 'splash'
   | 'tasks'
   | 'create-task'
+  | 'wishlist'
+  | 'friend-wishlist'
   | 'profile'
   | 'house-settings';
 

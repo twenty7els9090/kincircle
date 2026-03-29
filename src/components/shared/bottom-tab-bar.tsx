@@ -1,35 +1,21 @@
 'use client';
 
-import { Home, Calendar, Heart, User } from 'lucide-react';
+import { Home, Heart, User } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 export function BottomTabBar() {
-  const { screen, setScreen, showToast } = useAppStore();
+  const { screen, setScreen } = useAppStore();
 
   const tabs = [
-    { id: 'tasks' as const, icon: Home, active: true },
-    { id: 'events' as const, icon: Calendar, active: false },
-    { id: 'wishlist' as const, icon: Heart, active: false },
-    { id: 'profile' as const, icon: User, active: true },
+    { id: 'tasks' as const, icon: Home, label: 'Задачи' },
+    { id: 'wishlist' as const, icon: Heart, label: 'Вишлист' },
+    { id: 'profile' as const, icon: User, label: 'Профиль' },
   ];
-
-  const handleTabClick = (tab: typeof tabs[number]) => {
-    if (!tab.active) {
-      showToast('Скоро появится!');
-      return;
-    }
-    setScreen(tab.id);
-  };
-
-  const isActive = (tabId: string) => {
-    if (!tabs.find((t) => t.id === tabId)?.active) return false;
-    return screen === tabId;
-  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div
-        className="pointer-events-auto flex items-center gap-3 px-5 mx-2 mb-4 rounded-[28px]"
+        className="pointer-events-auto flex items-center gap-1 px-3 mx-2 mb-4 rounded-[28px]"
         style={{
           height: 56,
           background: 'var(--ios-tab-bg)',
@@ -41,18 +27,16 @@ export function BottomTabBar() {
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const active = isActive(tab.id);
-          const disabled = !tab.active;
+          const active = screen === tab.id || (tab.id === 'wishlist' && screen === 'friend-wishlist');
           return (
             <button
               key={tab.id}
-              onClick={() => handleTabClick(tab)}
-              className="flex items-center justify-center rounded-2xl transition-all duration-200"
+              onClick={() => setScreen(tab.id)}
+              className="flex flex-col items-center justify-center rounded-2xl transition-all duration-200 px-4"
               style={{
-                width: 44,
+                width: 64,
                 height: 44,
                 background: active ? 'rgba(0,122,255,0.12)' : 'transparent',
-                opacity: disabled ? 0.3 : 1,
               }}
             >
               <Icon
@@ -60,6 +44,12 @@ export function BottomTabBar() {
                 strokeWidth={active ? 2.2 : 1.6}
                 color={active ? '#007AFF' : '#8E8E93'}
               />
+              <span
+                className="text-[10px] mt-[2px] font-medium"
+                style={{ color: active ? '#007AFF' : '#8E8E93' }}
+              >
+                {tab.label}
+              </span>
             </button>
           );
         })}

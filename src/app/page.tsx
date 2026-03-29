@@ -6,6 +6,8 @@ import { useAppStore, authFetch } from '@/lib/store';
 import { SplashScreen } from '@/components/screens/splash';
 import { TasksScreen } from '@/components/screens/tasks';
 import { CreateTaskScreen } from '@/components/screens/create-task';
+import { WishlistScreen } from '@/components/screens/wishlist';
+import { FriendWishlistScreen } from '@/components/screens/friend-wishlist';
 import { ProfileScreen } from '@/components/screens/profile';
 import { HouseSettingsScreen } from '@/components/screens/house-settings';
 import { BottomTabBar } from '@/components/shared/bottom-tab-bar';
@@ -24,7 +26,7 @@ function ScreenRouter() {
   // Global Realtime subscriptions + polling — always active after login
   useRealtime();
 
-  const showTabBar = currentUser && ['tasks', 'profile'].includes(screen);
+  const showTabBar = currentUser && ['tasks', 'wishlist', 'friend-wishlist', 'profile'].includes(screen);
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--ios-bg)' }}>
@@ -40,6 +42,8 @@ function ScreenRouter() {
           {screen === 'splash' && <SplashScreen />}
           {screen === 'tasks' && <TasksScreen />}
           {screen === 'create-task' && <CreateTaskScreen />}
+          {screen === 'wishlist' && <WishlistScreen />}
+          {screen === 'friend-wishlist' && <FriendWishlistScreen />}
           {screen === 'profile' && <ProfileScreen />}
           {screen === 'house-settings' && <HouseSettingsScreen />}
         </motion.div>
