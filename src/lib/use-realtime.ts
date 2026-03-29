@@ -7,14 +7,14 @@ import { supabase } from '@/lib/supabase';
 type ChannelName = string;
 
 /**
- * Polling — primary mechanism for syncing data between users.
- * Always refetches regardless of local actions (optimistic updates
- * are immediately consistent with server anyway).
+ * Polling for friends ONLY.
+ * Tasks use Realtime subscriptions — no polling, so optimistic updates
+ * are never overwritten by stale server state.
  */
 function usePolling(
   enabled: boolean,
   callback: () => void,
-  intervalMs: number = 3000
+  intervalMs: number = 4000
 ) {
   const savedCallback = useRef(callback);
   useEffect(() => {
@@ -23,7 +23,6 @@ function usePolling(
 
   useEffect(() => {
     if (!enabled) return;
-    // Refetch immediately on enable
     savedCallback.current();
     const id = setInterval(() => {
       savedCallback.current();
@@ -33,9 +32,9 @@ function usePolling(
 }
 
 /**
- * Global Realtime subscriptions + polling fallback.
- * Polling is the PRIMARY sync mechanism (3s interval).
- * Realtime provides instant updates when available.
+ * Global Realtime + polling.
+ * - Tasks: Realtime only (no polling — avoids race with optimistic updates)
+ * - Friends: Polling (4s) + Realtime as bonus
  */
 export function useRealtime() {
   const userId = useAppStore((s) => s.currentUser?.id);
@@ -79,32 +78,10 @@ export function useRealtime() {
     } catch { /* silent */ }
   }, []);
 
-  const refetchHouseMembers = useCallback(async () => {
-    const currentHouseId = useAppStore.getState().activeHouse?.id;
-    if (!currentHouseId) return;
-    try {
-      const token = useAppStore.getState().authToken;
-      if (!token) return;
-      const res = await fetch(`/api/houses/${currentHouseId}/members`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (Array.isArray(data.members)) {
-        useAppStore.getState().setHouseMembers(data.members);
-      }
-    } catch { /* silent */ }
-  }, []);
+  // ─── Polling — friends ONLY (tasks use Realtime) ───
+  usePolling(!!userId && !!authToken, refetchFriends, 4000);
 
-  // ─── Polling — always active when logged in (primary sync) ───
-  usePolling(!!userId && !!authToken, () => {
-    refetchTasks();
-    refetchFriends();
-    refetchHouseMembers();
-  }, 3000);
-
-  // ─── Realtime subscriptions (instant updates when available) ───
-
+  // ─── Realtime channel factory ───
   const createChannel = useCallback((
     name: ChannelName,
     table: string,
@@ -118,7 +95,6 @@ export function useRealtime() {
     const channel = supabase
       .channel(name, {
         config: {
-          // Pass JWT token per-channel for RLS
           // @ts-expect-error — token is valid in channel config but not typed
           token: authToken,
         },
@@ -132,17 +108,15 @@ export function useRealtime() {
           filter,
         },
         () => {
-          // Small delay to let DB transaction commit
-          setTimeout(onEvent, 300);
+          // Delay to let DB transaction commit before refetching
+          setTimeout(onEvent, 500);
         },
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log(`[Realtime] ${name}: SUBSCRIBED`);
         } else if (status === 'CHANNEL_ERROR') {
-          console.warn(`[Realtime] ${name}: CHANNEL_ERROR — polling active`);
-        } else if (status === 'TIMED_OUT') {
-          console.warn(`[Realtime] ${name}: TIMED_OUT — polling active`);
+          console.warn(`[Realtime] ${name}: CHANNEL_ERROR`);
         }
       });
 
@@ -176,13 +150,13 @@ export function useRealtime() {
       `house-members:${houseId}`,
       'HouseMember',
       `houseId=eq.${houseId}`,
-      () => { refetchHouseMembers(); refetchTasks(); }
+      refetchTasks
     );
     return () => {
       if (ch) supabase!.removeChannel(ch);
       channelsRef.current = channelsRef.current.filter((n) => n !== `house-members:${houseId}`);
     };
-  }, [userId, houseId, authToken, refetchHouseMembers, refetchTasks, createChannel]);
+  }, [userId, houseId, authToken, refetchTasks, createChannel]);
 
   // ─── Friendship Realtime ───
   useEffect(() => {
