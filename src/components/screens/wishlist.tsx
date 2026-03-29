@@ -162,40 +162,21 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
           <span className="text-[12px] font-medium" style={{ color: 'var(--ios-text-secondary)' }}>Друзья</span>
         </button>
 
-        {/* Animated title — always large */}
+        {/* Animated title */}
         <div className="pr-[90px]">
-          <div className="space-y-0">
-            {/* Line 1: Все! */}
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0 }}
-              className="font-black leading-[1.1] tracking-tight text-[30px]"
-              style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
-            >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <p className="text-[26px] font-semibold leading-[1.25]" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
               Все!
-            </motion.p>
-            {/* Line 2: Чего, */}
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="font-bold leading-[1.1] text-[24px]"
-              style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}
-            >
+            </p>
+            <p className="text-[26px] font-semibold leading-[1.25]" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
               Чего,
-            </motion.p>
-            {/* Line 3: Хочу я... + heart + добавить */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="flex items-center gap-2"
-            >
-              <p
-                className="font-bold leading-[1.1] text-[24px]"
-                style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}
-              >
+            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-[26px] font-semibold leading-[1.25]" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
                 Хочу я...
               </p>
               <button
@@ -203,16 +184,11 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
                 className="rounded-full flex items-center gap-1.5 active:scale-90 transition-transform shrink-0 pl-2.5 pr-4 py-1.5"
                 style={{ background: '#FF2D55' }}
               >
-                <Heart
-                  size={16}
-                  color="white"
-                  fill="white"
-                  strokeWidth={0}
-                />
+                <Heart size={16} color="white" fill="white" strokeWidth={0} />
                 <span className="font-semibold text-white text-[14px]">добавить</span>
               </button>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
 
         {/* Subtitle only when empty */}
