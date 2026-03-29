@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
 import { supabase, setRealtimeAuth } from '@/lib/supabase';
-import { shouldSkipRefetch, markLocalAction } from '@/lib/realtime-guard';
+import { shouldSkipRefetch } from '@/lib/realtime-guard';
 
 type ChannelName = string;
 
@@ -26,9 +26,10 @@ export function useRealtime() {
     }
   }, [authToken]);
 
-  // Refetch helpers
+  // Refetch helpers — NO shouldSkipRefetch here!
+  // Realtime events come from OTHER users, we always want to refetch.
   const refetchTasks = useCallback(async () => {
-    if (shouldSkipRefetch()) return;
+    if (!houseId) return;
     try {
       const res = await fetchWithAuth(`/api/tasks?houseId=${houseId}`);
       if (!res.ok) return;
@@ -38,7 +39,6 @@ export function useRealtime() {
   }, [houseId]);
 
   const refetchFriends = useCallback(async () => {
-    if (shouldSkipRefetch()) return;
     try {
       const res = await fetchWithAuth(`/api/friends`);
       if (!res.ok) return;
@@ -53,7 +53,7 @@ export function useRealtime() {
   }, []);
 
   const refetchHouseMembers = useCallback(async () => {
-    if (shouldSkipRefetch() || !houseId) return;
+    if (!houseId) return;
     try {
       const res = await fetchWithAuth(`/api/houses/${houseId}/members`);
       if (!res.ok) return;
@@ -65,7 +65,6 @@ export function useRealtime() {
   }, [houseId]);
 
   // ─── Task Realtime ───
-  // C6 fix: filter by houseId so user only sees their house's tasks
   useEffect(() => {
     if (!userId || !houseId || !supabase) return;
 
@@ -73,7 +72,7 @@ export function useRealtime() {
     channelsRef.current.push(channelName);
 
     const channel = supabase
-      .channel(channelName, { config: { broadcast: { self: false } } })
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -82,17 +81,13 @@ export function useRealtime() {
           table: 'Task',
           filter: `houseId=eq.${houseId}`,
         },
-        () => {
-          markLocalAction(); // Prevent duplicate refetch from our own actions
-          setTimeout(() => {
-            refetchTasks();
-          }, 300); // Small delay to let DB commit finish
+        (payload: any) => {
+          console.log('[Realtime] Task event:', payload.eventType, payload.new?.id);
+          setTimeout(refetchTasks, 300);
         },
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          window.dispatchEvent(new CustomEvent('kinnect:realtime-connected'));
-        }
+        console.log('[Realtime] Tasks channel status:', status);
       });
 
     return () => {
@@ -109,7 +104,7 @@ export function useRealtime() {
     channelsRef.current.push(channelName);
 
     const channel = supabase
-      .channel(channelName, { config: { broadcast: { self: false } } })
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -117,14 +112,14 @@ export function useRealtime() {
           schema: 'public',
           table: 'TaskAssignee',
         },
-        () => {
-          markLocalAction();
-          setTimeout(() => {
-            refetchTasks();
-          }, 300);
+        (payload: any) => {
+          console.log('[Realtime] TaskAssignee event:', payload.eventType);
+          setTimeout(refetchTasks, 300);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Realtime] TaskAssignee channel status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -140,7 +135,7 @@ export function useRealtime() {
     channelsRef.current.push(channelName);
 
     const channel = supabase
-      .channel(channelName, { config: { broadcast: { self: false } } })
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -149,14 +144,17 @@ export function useRealtime() {
           table: 'HouseMember',
           filter: `houseId=eq.${houseId}`,
         },
-        () => {
+        (payload: any) => {
+          console.log('[Realtime] HouseMember event:', payload.eventType);
           setTimeout(() => {
             refetchHouseMembers();
-            refetchTasks(); // Tasks might reference new members
+            refetchTasks();
           }, 300);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Realtime] HouseMember channel status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -172,7 +170,7 @@ export function useRealtime() {
     const ch1Name = `friends-from:${userId}`;
     channelsRef.current.push(ch1Name);
     const ch1 = supabase
-      .channel(ch1Name, { config: { broadcast: { self: false } } })
+      .channel(ch1Name)
       .on(
         'postgres_changes',
         {
@@ -181,17 +179,20 @@ export function useRealtime() {
           table: 'Friendship',
           filter: `userId=eq.${userId}`,
         },
-        () => {
-          setTimeout(() => refetchFriends(), 300);
+        (payload: any) => {
+          console.log('[Realtime] Friendship (from) event:', payload.eventType);
+          setTimeout(refetchFriends, 300);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Realtime] Friends-from channel status:', status);
+      });
 
     // Channel: events where I received a request
     const ch2Name = `friends-to:${userId}`;
     channelsRef.current.push(ch2Name);
     const ch2 = supabase
-      .channel(ch2Name, { config: { broadcast: { self: false } } })
+      .channel(ch2Name)
       .on(
         'postgres_changes',
         {
@@ -200,11 +201,14 @@ export function useRealtime() {
           table: 'Friendship',
           filter: `friendId=eq.${userId}`,
         },
-        () => {
-          setTimeout(() => refetchFriends(), 300);
+        (payload: any) => {
+          console.log('[Realtime] Friendship (to) event:', payload.eventType);
+          setTimeout(refetchFriends, 300);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Realtime] Friends-to channel status:', status);
+      });
 
     return () => {
       supabase.removeChannel(ch1);

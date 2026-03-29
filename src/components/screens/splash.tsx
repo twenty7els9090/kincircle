@@ -57,13 +57,15 @@ function initTelegram(): TelegramWebApp | null {
   tg.ready();
   tg.expand();
 
-  // Apply Telegram theme
+  // Sync Telegram theme with app
   const bg = tg.themeParams.bg_color || '#F2F2F7';
   document.documentElement.style.setProperty('--ios-bg', bg);
 
-  if (tg.colorScheme === 'dark') {
-    document.documentElement.classList.add('dark');
-  }
+  const isDark = tg.colorScheme === 'dark';
+  document.documentElement.classList.toggle('dark', isDark);
+
+  // Sync with Zustand store so page.tsx doesn't override
+  useAppStore.getState().setDarkMode(isDark);
 
   return tg;
 }
