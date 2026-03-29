@@ -95,7 +95,7 @@ export function CreateTaskScreen() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--ios-bg)' }}>
-      <div className="flex items-center justify-between px-4 py-3" style={{ paddingTop: 'max(16px, calc(env(safe-area-inset-top, 16px) + 8px))' }}>
+      <div className="flex items-center justify-between px-4 py-3" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
         <button onClick={popScreen} className="flex items-center justify-center w-[44px] h-[44px] -ml-1 active:opacity-50 transition-opacity">
           <ChevronLeft size={24} color="#007AFF" />
         </button>

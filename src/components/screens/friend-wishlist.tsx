@@ -121,7 +121,7 @@ export function FriendWishlistScreen() {
 
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between px-4 py-3" style={{ paddingTop: 'max(16px, calc(env(safe-area-inset-top, 16px) + 8px))' }}>
+      <div className="flex items-center justify-between px-4 py-3" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
         <button onClick={popScreen} className="flex items-center justify-center w-[44px] h-[44px] -ml-1 active:opacity-50 transition-opacity">
           <ChevronLeft size={24} color="#007AFF" />
         </button>
@@ -240,11 +240,9 @@ function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUser
           )}
 
           {/* ── All text overlaid ── */}
-          <div className="absolute inset-x-0 bottom-0 p-5 pb-5 flex flex-col gap-2">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-              <p className="text-[22px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
-              {formattedPrice && <p className="text-[20px] font-bold leading-tight" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
-            </div>
+          <div className="absolute inset-x-0 bottom-0 p-5 pb-5 flex flex-col gap-1.5">
+            <p className="text-[22px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
+            {formattedPrice && <p className="text-[18px] font-bold leading-tight" style={{ color: 'rgba(255,255,255,0.85)' }}>{formattedPrice}</p>}
             {currentItem.comment && (
               <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{currentItem.comment}</p>
             )}
