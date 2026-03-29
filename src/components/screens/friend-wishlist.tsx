@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Gift, ExternalLink, Info, Trash2 } from 'lucide-react';
+import { ChevronLeft, Gift, ExternalLink, Info } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 
 /* ─── Types ─── */
@@ -41,7 +41,7 @@ function formatPrice(raw: string | null): string | null {
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
 const CARD_HEIGHT = 520;
-const SWIPE_THRESHOLD = 50;
+const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════
    Main Screen
@@ -125,29 +125,18 @@ export function FriendWishlistScreen() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Friend Card Stack — one solid card, all info overlaid
+   Friend Card Stack — smooth animated transitions
    ═══════════════════════════════════════════════════════ */
 
 function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUserId, onReserve, reserving, direction }: {
   items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; dark?: boolean;
   currentUserId: string; onReserve: (id: string, action: 'reserve' | 'unreserve') => void; reserving: string | null; direction: 'left' | 'right';
 }) {
-  const touchStartX = useRef(0);
-  const [swipeDelta, setSwipeDelta] = useState(0);
-
   const currentItem = items[currentIndex];
   if (!currentItem) return null;
 
   const hasNext1 = currentIndex + 1 < items.length;
   const hasNext2 = currentIndex + 2 < items.length;
-
-  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchMove = (e: React.TouchEvent) => { setSwipeDelta(e.touches[0].clientX - touchStartX.current); };
-  const handleTouchEnd = () => {
-    if (swipeDelta < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
-    else if (swipeDelta > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
-    setSwipeDelta(0);
-  };
 
   const formattedPrice = formatPrice(currentItem.price || null);
   const color = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
@@ -176,95 +165,92 @@ function FriendCardStack({ items, currentIndex, onIndexChange, dark, currentUser
         }} />
       )}
 
-      {/* ─── Card (ONE surface) with animated transitions ─── */}
-      <AnimatePresence mode="popLayout" custom={direction}>
-      <motion.div
-        key={currentItem.id}
-        custom={direction}
-        initial={{ x: direction === 'left' ? 300 : -300, opacity: 0.5 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: direction === 'left' ? -300 : 300, opacity: 0.5 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="absolute rounded-[24px] overflow-hidden"
-        style={{ top: 0, left: 0, right: 0, height: CARD_HEIGHT, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.4}
-        onDragEnd={(_, info) => {
-          if (info.offset.x < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
-          else if (info.offset.x > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Full background */}
-        <div className="absolute inset-0" style={{ background: color }}>
-          {currentItem.photoUrl ? (
-            <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
-            </div>
-          )}
-        </div>
-
-        {/* Bottom gradient */}
-        <div className="absolute inset-x-0 bottom-0" style={{
-          height: '80%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.12) 65%, transparent 100%)',
-        }} />
-
-        {/* Status badge top-right */}
-        {isReservedByMe && (
-          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold z-10" style={{ background: 'rgba(255,149,0,0.9)', color: '#fff' }}>Я беру</div>
-        )}
-        {isReservedByOther && (
-          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold z-10" style={{ background: 'rgba(0,0,0,0.45)', color: '#fff' }}>Занято</div>
-        )}
-
-        {/* ── All text overlaid ── */}
-        <div className="absolute inset-x-0 bottom-0 p-5 pb-5 flex flex-col gap-2">
-          <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
-          {formattedPrice && <p className="text-[15px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
-          {currentItem.link && (
-            <a href={currentItem.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.75)' }} onClick={(e) => e.stopPropagation()}>
-              <ExternalLink size={13} strokeWidth={2} /> Открыть ссылку
-            </a>
-          )}
-          {currentItem.comment && (
-            <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{currentItem.comment}</p>
-          )}
-
-          {/* Reserve actions */}
-          <div className="mt-1">
-            {isFree && (
-              <button
-                onClick={() => onReserve(currentItem.id, 'reserve')} disabled={!!isReservingThis}
-                className="w-full py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity"
-                style={{ background: '#007AFF', color: '#ffffff', opacity: isReservingThis ? 0.5 : 1 }}
-              >
-                Зарезервирую — куплю это
-              </button>
-            )}
-            {isReservedByOther && (
-              <div className="flex items-start gap-2 rounded-xl p-2.5" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-                <Info size={15} color="rgba(255,255,255,0.8)" className="shrink-0 mt-0.5" />
-                <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>Кто-то уже планирует купить это</p>
+      {/* ─── Card with smooth transition ─── */}
+      <AnimatePresence mode="wait" custom={direction}>
+        <motion.div
+          key={currentItem.id}
+          custom={direction}
+          initial={{ x: direction === 'left' ? '100%' : '-100%', opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: direction === 'left' ? '-100%' : '100%', opacity: 0 }}
+          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="absolute rounded-[24px] overflow-hidden"
+          style={{ top: 0, left: 0, right: 0, height: CARD_HEIGHT, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.15}
+          onDragEnd={(_, info) => {
+            if (info.offset.x < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
+            else if (info.offset.x > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
+          }}
+        >
+          {/* Full background */}
+          <div className="absolute inset-0" style={{ background: color }}>
+            {currentItem.photoUrl ? (
+              <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" draggable={false} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
               </div>
             )}
-            {isReservedByMe && (
-              <button
-                onClick={() => onReserve(currentItem.id, 'unreserve')} disabled={!!isReservingThis}
-                className="w-full py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity"
-                style={{ background: '#34C759', color: '#ffffff', opacity: isReservingThis ? 0.5 : 1 }}
-              >
-                Это я беру — отменить
-              </button>
-            )}
           </div>
-        </div>
-      </motion.div>
+
+          {/* Bottom gradient */}
+          <div className="absolute inset-x-0 bottom-0" style={{
+            height: '80%',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 35%, rgba(0,0,0,0.12) 65%, transparent 100%)',
+          }} />
+
+          {/* Status badge top-right */}
+          {isReservedByMe && (
+            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold z-10" style={{ background: 'rgba(255,149,0,0.9)', color: '#fff' }}>Я беру</div>
+          )}
+          {isReservedByOther && (
+            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[12px] font-semibold z-10" style={{ background: 'rgba(0,0,0,0.45)', color: '#fff' }}>Занято</div>
+          )}
+
+          {/* ── All text overlaid ── */}
+          <div className="absolute inset-x-0 bottom-0 p-5 pb-5 flex flex-col gap-2">
+            <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">{currentItem.title}</p>
+            {formattedPrice && <p className="text-[15px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>{formattedPrice}</p>}
+            {currentItem.link && (
+              <a href={currentItem.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.75)' }} onClick={(e) => e.stopPropagation()}>
+                <ExternalLink size={13} strokeWidth={2} /> Открыть ссылку
+              </a>
+            )}
+            {currentItem.comment && (
+              <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{currentItem.comment}</p>
+            )}
+
+            {/* Reserve actions */}
+            <div className="mt-1">
+              {isFree && (
+                <button
+                  onClick={() => onReserve(currentItem.id, 'reserve')} disabled={!!isReservingThis}
+                  className="w-full py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity"
+                  style={{ background: '#007AFF', color: '#ffffff', opacity: isReservingThis ? 0.5 : 1 }}
+                >
+                  Зарезервирую — куплю это
+                </button>
+              )}
+              {isReservedByOther && (
+                <div className="flex items-start gap-2 rounded-xl p-2.5" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                  <Info size={15} color="rgba(255,255,255,0.8)" className="shrink-0 mt-0.5" />
+                  <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>Кто-то уже планирует купить это</p>
+                </div>
+              )}
+              {isReservedByMe && (
+                <button
+                  onClick={() => onReserve(currentItem.id, 'unreserve')} disabled={!!isReservingThis}
+                  className="w-full py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity"
+                  style={{ background: '#34C759', color: '#ffffff', opacity: isReservingThis ? 0.5 : 1 }}
+                >
+                  Это я беру — отменить
+                </button>
+              )}
+            </div>
+          </div>
+        </motion.div>
       </AnimatePresence>
     </div>
   );

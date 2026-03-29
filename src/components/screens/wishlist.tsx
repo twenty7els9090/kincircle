@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Gift, Trash2, ExternalLink,
-  ChevronRight, Users, Lock,
+  ChevronRight, Users, Lock, Heart,
 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { AddWishSheet } from '@/components/shared/add-wish-sheet';
@@ -21,7 +21,8 @@ interface WishItem {
   link: string | null;
   comment: string | null;
   visibleTo: string | null;
-  reservedBy: string | null;
+  reservedBy: string | null; // now returns displayName or null
+  reservedByAvatar: string | null;
   createdAt: string;
 }
 
@@ -56,7 +57,7 @@ function formatPrice(raw: string | null): string | null {
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 460;
+const CARD_HEIGHT = 440;
 const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════
@@ -69,24 +70,10 @@ export function WishlistScreen() {
 
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
-      {/* Header with friends button */}
-      <div className="shrink-0 flex items-center justify-between px-4 pt-[58px] pb-1">
-        <div className="w-10" />
-        <button
-          onClick={() => { setView(view === 'own' ? 'friends' : 'own'); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full active:opacity-70 transition-opacity"
-          style={{ background: 'var(--ios-toggle-bg)' }}
-        >
-          <Users size={16} style={{ color: 'var(--ios-text-secondary)' }} />
-          <span className="text-[13px] font-medium" style={{ color: 'var(--ios-text-secondary)' }}>Друзья</span>
-        </button>
-        <div className="w-10" />
-      </div>
-
       <AnimatePresence mode="wait">
         {view === 'own' ? (
           <motion.div key="own" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1">
-            <MyWishlist />
+            <MyWishlist onOpenFriends={() => setView('friends')} />
           </motion.div>
         ) : (
           <motion.div key="friends" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1">
@@ -102,7 +89,7 @@ export function WishlistScreen() {
    My Wishlist Tab
    ═══════════════════════════════════════════════════════ */
 
-function MyWishlist() {
+function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
   const { currentUser, darkMode, showToast } = useAppStore();
   const [wishList, setWishList] = useState<WishList | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,50 +144,99 @@ function MyWishlist() {
   };
 
   const items = wishList?.items || [];
+  const hasItems = items.length > 0;
 
   if (loading) return <div className="flex items-center justify-center py-20"><div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} /></div>;
 
   return (
     <div className="relative">
-      {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-8 pt-20">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <p className="text-[36px] font-black text-center leading-[1.1] tracking-tight" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>
+      {/* ─── Header: always visible ─── */}
+      <div className="relative px-4 pt-[50px] pb-2">
+        {/* Friends button — top right */}
+        <button
+          onClick={onOpenFriends}
+          className="absolute top-[50px] right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full active:opacity-70 transition-opacity z-10"
+          style={{ background: 'var(--ios-toggle-bg)' }}
+        >
+          <Users size={15} style={{ color: 'var(--ios-text-secondary)' }} />
+          <span className="text-[12px] font-medium" style={{ color: 'var(--ios-text-secondary)' }}>Друзья</span>
+        </button>
+
+        {/* Animated title — large when empty, compact when has items */}
+        <div className="pr-[90px]">
+          <div className={hasItems ? 'space-y-0' : 'space-y-1'}>
+            {/* Line 1: Все! */}
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0 }}
+              className={`font-black leading-[1.1] tracking-tight ${hasItems ? 'text-[22px]' : 'text-[36px]'}`}
+              style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
+            >
               Все!
-            </p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
-            <p className="text-[28px] font-bold text-center leading-[1.1] mt-2" style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}>
+            </motion.p>
+            {/* Line 2: Чего, */}
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className={`font-bold leading-[1.1] ${hasItems ? 'text-[17px]' : 'text-[28px]'}`}
+              style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}
+            >
               Чего,
-            </p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-[28px] font-bold leading-[1.1]" style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}>
-                Хочу я!
+            </motion.p>
+            {/* Line 3: Хочу я... + heart button */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="flex items-center gap-2"
+            >
+              <p
+                className={`font-bold leading-[1.1] ${hasItems ? 'text-[17px]' : 'text-[28px]'}`}
+                style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}
+              >
+                Хочу я...
               </p>
               <button
                 onClick={() => setShowAddSheet(true)}
-                className="w-[44px] h-[44px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                style={{ background: '#007AFF' }}
+                className={`rounded-full flex items-center justify-center active:scale-90 transition-transform shrink-0 ${hasItems ? 'w-[30px] h-[30px]' : 'w-[44px] h-[44px]'}`}
+                style={{ background: '#FF2D55' }}
               >
-                <Plus size={22} color="white" strokeWidth={2.5} />
+                <Heart
+                  size={hasItems ? 16 : 22}
+                  color="white"
+                  fill="white"
+                  strokeWidth={0}
+                />
               </button>
-            </div>
-          </motion.div>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.5 }} className="ios-meta text-center mt-6">
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Subtitle only when empty */}
+        {!hasItems && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
+            className="ios-meta text-center mt-5"
+          >
             Добавьте желания, чтобы друзья знали, что вам подарить
           </motion.p>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center px-4 mt-2">
+        )}
+      </div>
+
+      {/* ─── Cards ─── */}
+      {hasItems && (
+        <div className="flex flex-col items-center px-4 mt-3">
           <OwnCardStack items={items} currentIndex={currentIndex} onIndexChange={goToIndex} onDelete={handleDeleteItem} dark={darkMode} direction={direction} />
           <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={goToIndex} />
         </div>
       )}
 
-      {/* FAB */}
-      {items.length > 0 && (
+      {/* FAB — only when has items */}
+      {hasItems && (
         <button onClick={() => setShowAddSheet(true)} className="fixed bottom-24 right-4 w-[56px] h-[56px] rounded-full flex items-center justify-center z-[60] shadow-lg active:scale-95 transition-transform" style={{ background: '#007AFF' }}>
           <Plus size={28} color="white" strokeWidth={2.5} />
         </button>
@@ -212,14 +248,12 @@ function MyWishlist() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Own Card Stack — one solid card, animated transitions
+   Own Card Stack — smooth animated transitions
    ═══════════════════════════════════════════════════════ */
 
 function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, direction }: {
   items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; onDelete: (id: string) => void; dark?: boolean; direction: 'left' | 'right';
 }) {
-  const touchStartX = useRef(0);
-  const [swipeDelta, setSwipeDelta] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
 
   const currentItem = items[currentIndex];
@@ -228,24 +262,9 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, dire
   const hasNext1 = currentIndex + 1 < items.length;
   const hasNext2 = currentIndex + 2 < items.length;
 
-  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchMove = (e: React.TouchEvent) => { setSwipeDelta(e.touches[0].clientX - touchStartX.current); };
-  const handleTouchEnd = () => {
-    if (swipeDelta < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
-    else if (swipeDelta > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
-    setSwipeDelta(0);
-  };
-
   const formattedPrice = formatPrice(currentItem.price);
   const color = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
-  const isReserved = currentItem.reservedBy === '__reserved__';
-
-  // Slide animation variants
-  const slideVariants = {
-    enter: (d: 'left' | 'right') => ({ x: d === 'left' ? 300 : -300, opacity: 0.5 }),
-    center: { x: 0, opacity: 1 },
-    exit: (d: 'left' | 'right') => ({ x: d === 'left' ? -300 : 300, opacity: 0.5 }),
-  };
+  const isReserved = !!currentItem.reservedBy;
 
   return (
     <>
@@ -271,16 +290,15 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, dire
           }} />
         )}
 
-        {/* ─── Card (ONE surface) with animated transitions ─── */}
-        <AnimatePresence mode="popLayout" custom={direction}>
+        {/* ─── Card with smooth transition ─── */}
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={currentItem.id}
             custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            initial={{ x: direction === 'left' ? '100%' : '-100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: direction === 'left' ? '-100%' : '100%', opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
             className="absolute rounded-[24px] overflow-hidden"
             style={{
               top: 0, left: 0, right: 0, height: CARD_HEIGHT,
@@ -288,19 +306,16 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, dire
             }}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.4}
+            dragElastic={0.15}
             onDragEnd={(_, info) => {
               if (info.offset.x < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
               else if (info.offset.x > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
             }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
             {/* Full background: image or color */}
             <div className="absolute inset-0" style={{ background: color }}>
               {currentItem.photoUrl ? (
-                <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
+                <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" draggable={false} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
@@ -316,9 +331,13 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, dire
 
             {/* ── Reserved badge top-left ── */}
             {isReserved && (
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full z-10" style={{ background: 'rgba(255,149,0,0.9)' }}>
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10" style={{ background: 'rgba(255,149,0,0.9)' }}>
                 <Lock size={12} color="white" strokeWidth={2} />
-                <span className="text-[12px] font-semibold text-white">Забронировано</span>
+                <span className="text-[12px] font-semibold text-white">
+                  {currentItem.reservedBy && currentItem.reservedBy !== '__reserved__'
+                    ? `${currentItem.reservedBy} берёт`
+                    : 'Забронировано'}
+                </span>
               </div>
             )}
 

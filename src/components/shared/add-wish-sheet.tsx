@@ -40,7 +40,6 @@ function AddWishSheetInner({ onAdd }: { onAdd: AddWishSheetProps['onAdd'] }) {
   const [urlInput, setUrlInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Load friends on mount
   if (currentUser && !friendsLoaded) {
@@ -185,9 +184,21 @@ function AddWishSheetInner({ onAdd }: { onAdd: AddWishSheetProps['onAdd'] }) {
         {!photoUrl && !uploading && (
           <>
             <div className="flex gap-2">
-              {/* Camera */}
+              {/* Camera — creates fresh input with capture="user" each time */}
               <button
-                onClick={() => cameraInputRef.current?.click()}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.capture = 'user' as unknown as string;
+                  input.onchange = ((e: Event) => {
+                    const target = e.target as HTMLInputElement;
+                    if (target.files && target.files[0]) {
+                      handleFileSelect({ target, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.ChangeEvent<HTMLInputElement>);
+                    }
+                  }) as EventListener;
+                  input.click();
+                }}
                 className="flex-1 flex items-center justify-center gap-2 py-[10px] rounded-xl text-[14px] font-medium transition-colors active:opacity-70"
                 style={{ background: 'var(--ios-toggle-bg)', color: 'var(--ios-text-primary)' }}
               >
@@ -252,19 +263,11 @@ function AddWishSheetInner({ onAdd }: { onAdd: AddWishSheetProps['onAdd'] }) {
           </div>
         )}
 
-        {/* Hidden file inputs */}
+        {/* Hidden file input for gallery (and fallback camera) */}
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="user"
           className="hidden"
           onChange={handleFileSelect}
         />
