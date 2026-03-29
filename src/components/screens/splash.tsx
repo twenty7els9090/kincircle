@@ -4,84 +4,19 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore, authFetch } from '@/lib/store';
 
-interface TelegramWebApp {
-  ready: () => void;
-  expand: () => void;
-  initData: string;
-  initDataUnsafe: {
-    user?: {
-      id: number;
-      first_name: string;
-      last_name?: string;
-      username?: string;
-      photo_url?: string;
-    };
-    auth_date?: number;
-  };
-  themeParams: Record<string, string>;
-  colorScheme: 'light' | 'dark';
-  MainButton: {
-    text: string;
-    show: () => void;
-    hide: () => void;
-    onClick: (fn: () => void) => void;
-  };
-  BackButton: {
-    show: () => void;
-    hide: () => void;
-    onClick: (fn: () => void) => void;
-  };
-  HapticFeedback: {
-    impactOccurred: (style: string) => void;
-    notificationOccurred: (type: string) => void;
-    selectionChanged: () => void;
-  };
-}
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: TelegramWebApp;
-    };
-  }
-}
-
-function isTelegram(): boolean {
-  return typeof window !== 'undefined' && !!window.Telegram?.WebApp?.initData;
-}
-
-function initTelegram(): TelegramWebApp | null {
-  if (typeof window === 'undefined' || !window.Telegram?.WebApp) return null;
-
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
-
-  // Sync Telegram theme with app — only update store, CSS vars come from :root/.dark
-  const isDark = tg.colorScheme === 'dark';
-  useAppStore.getState().setDarkMode(isDark);
-
-  // Listen for theme changes from Telegram settings
-  tg.onEvent('themeChanged', () => {
-    const dark = tg.colorScheme === 'dark';
-    useAppStore.getState().setDarkMode(dark);
-  });
-
-  return tg;
-}
-
 export function SplashScreen() {
-  const { setCurrentUser, setAuthToken, setScreen, setActiveHouse, showToast, setDarkMode } = useAppStore();
+  const { setCurrentUser, setAuthToken, setScreen, setActiveHouse, showToast } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [isTg, setIsTg] = useState(false);
 
-  // Detect Telegram on mount
+  // Detect Telegram on mount — just set the flag, theme is handled by page.tsx
   useEffect(() => {
-    const tg = initTelegram();
-    if (tg && tg.initData) {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.initData) {
+      tg.ready();
+      tg.expand();
       setIsTg(true);
-      // Auto-login via Telegram
       handleTelegramLogin(tg.initData);
     }
   }, []);

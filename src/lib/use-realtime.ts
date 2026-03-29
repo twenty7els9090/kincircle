@@ -2,26 +2,29 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
-import { supabase, setRealtimeAuth } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 type ChannelName = string;
 
 /**
- * Polling fallback for when Realtime is unavailable or RLS rejects subscriptions.
- * Runs on an interval and refetches data from API.
+ * Polling — primary mechanism for syncing data between users.
+ * Always refetches regardless of local actions (optimistic updates
+ * are immediately consistent with server anyway).
  */
 function usePolling(
   enabled: boolean,
   callback: () => void,
-  intervalMs: number = 5000
+  intervalMs: number = 3000
 ) {
   const savedCallback = useRef(callback);
   useEffect(() => {
     savedCallback.current = callback;
   }, [callback]);
-  
+
   useEffect(() => {
     if (!enabled) return;
+    // Refetch immediately on enable
+    savedCallback.current();
     const id = setInterval(() => {
       savedCallback.current();
     }, intervalMs);
@@ -31,211 +34,181 @@ function usePolling(
 
 /**
  * Global Realtime subscriptions + polling fallback.
- * Tries Realtime first, polls every 5s as backup.
+ * Polling is the PRIMARY sync mechanism (3s interval).
+ * Realtime provides instant updates when available.
  */
 export function useRealtime() {
   const userId = useAppStore((s) => s.currentUser?.id);
   const houseId = useAppStore((s) => s.activeHouse?.id);
   const authToken = useAppStore((s) => s.authToken);
   const channelsRef = useRef<ChannelName[]>([]);
-  const [realtimeConnected, setRealtimeConnected] = useRef(false);
-
-  // Set auth token on realtime connection
-  useEffect(() => {
-    if (authToken && supabase) {
-      setRealtimeAuth(authToken);
-    }
-  }, [authToken]);
 
   // ─── Refetch helpers ───
   const refetchTasks = useCallback(async () => {
-    if (!houseId) return;
+    const currentHouseId = useAppStore.getState().activeHouse?.id;
+    if (!currentHouseId) return;
     try {
-      const res = await fetchWithAuth(`/api/tasks?houseId=${houseId}`);
+      const token = useAppStore.getState().authToken;
+      if (!token) return;
+      const res = await fetch(`/api/tasks?houseId=${currentHouseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) return;
-      const { tasks: t } = await res.json();
+      const data = await res.json();
+      const t = data?.tasks;
       if (Array.isArray(t)) useAppStore.getState().setTasks(t);
     } catch { /* silent */ }
-  }, [houseId]);
+  }, []);
 
   const refetchFriends = useCallback(async () => {
     try {
-      const res = await fetchWithAuth(`/api/friends`);
+      const token = useAppStore.getState().authToken;
+      if (!token) return;
+      const res = await fetch('/api/friends', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) return;
-      const { friends, incoming, sent } = await res.json();
+      const data = await res.json();
       window.dispatchEvent(new CustomEvent('kinnect:friends-updated', {
         detail: {
-          friends: Array.isArray(friends) ? friends : [],
-          incoming: Array.isArray(incoming) ? incoming : [],
-          sent: Array.isArray(sent) ? sent : [],
+          friends: Array.isArray(data.friends) ? data.friends : [],
+          incoming: Array.isArray(data.incoming) ? data.incoming : [],
+          sent: Array.isArray(data.sent) ? data.sent : [],
         },
       }));
     } catch { /* silent */ }
   }, []);
 
   const refetchHouseMembers = useCallback(async () => {
-    if (!houseId) return;
+    const currentHouseId = useAppStore.getState().activeHouse?.id;
+    if (!currentHouseId) return;
     try {
-      const res = await fetchWithAuth(`/api/houses/${houseId}/members`);
+      const token = useAppStore.getState().authToken;
+      if (!token) return;
+      const res = await fetch(`/api/houses/${currentHouseId}/members`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) return;
-      const { members } = await res.json();
-      if (Array.isArray(members)) {
-        useAppStore.getState().setHouseMembers(members);
+      const data = await res.json();
+      if (Array.isArray(data.members)) {
+        useAppStore.getState().setHouseMembers(data.members);
       }
     } catch { /* silent */ }
-  }, [houseId]);
+  }, []);
 
-  // ─── Polling fallback (always active when logged in) ───
-  usePolling(!!userId, () => {
+  // ─── Polling — always active when logged in (primary sync) ───
+  usePolling(!!userId && !!authToken, () => {
     refetchTasks();
     refetchFriends();
     refetchHouseMembers();
-  }, 5000);
+  }, 3000);
 
-  // ─── Task Realtime ───
-  useEffect(() => {
-    if (!userId || !houseId || !supabase) return;
+  // ─── Realtime subscriptions (instant updates when available) ───
 
-    const channelName = `tasks:${houseId}`;
-    channelsRef.current.push(channelName);
+  const createChannel = useCallback((
+    name: ChannelName,
+    table: string,
+    filter: string,
+    onEvent: () => void
+  ) => {
+    if (!supabase || !authToken) return null;
+
+    channelsRef.current.push(name);
 
     const channel = supabase
-      .channel(channelName)
+      .channel(name, {
+        config: {
+          // Pass JWT token per-channel for RLS
+          // @ts-expect-error — token is valid in channel config but not typed
+          token: authToken,
+        },
+      })
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'Task',
-          filter: `houseId=eq.${houseId}`,
+          table,
+          filter,
         },
         () => {
-          setTimeout(refetchTasks, 200);
+          // Small delay to let DB transaction commit
+          setTimeout(onEvent, 300);
         },
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          realtimeConnected.current = true;
-          console.log('[Realtime] Tasks: SUBSCRIBED');
+          console.log(`[Realtime] ${name}: SUBSCRIBED`);
         } else if (status === 'CHANNEL_ERROR') {
-          console.warn('[Realtime] Tasks: CHANNEL_ERROR — polling will handle updates');
+          console.warn(`[Realtime] ${name}: CHANNEL_ERROR — polling active`);
+        } else if (status === 'TIMED_OUT') {
+          console.warn(`[Realtime] ${name}: TIMED_OUT — polling active`);
         }
       });
 
+    return channel;
+  }, [authToken]);
+
+  // ─── Task Realtime ───
+  useEffect(() => {
+    if (!userId || !houseId || !authToken) return;
+    const ch = createChannel(`tasks:${houseId}`, 'Task', `houseId=eq.${houseId}`, refetchTasks);
     return () => {
-      supabase.removeChannel(channel);
-      channelsRef.current = channelsRef.current.filter((n) => n !== channelName);
+      if (ch) supabase!.removeChannel(ch);
+      channelsRef.current = channelsRef.current.filter((n) => n !== `tasks:${houseId}`);
     };
-  }, [userId, houseId, refetchTasks]);
+  }, [userId, houseId, authToken, refetchTasks, createChannel]);
 
   // ─── TaskAssignee Realtime ───
   useEffect(() => {
-    if (!userId || !houseId || !supabase) return;
-
-    const channelName = `task-assignees:${houseId}`;
-    channelsRef.current.push(channelName);
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'TaskAssignee',
-        },
-        () => {
-          setTimeout(refetchTasks, 200);
-        },
-      )
-      .subscribe();
-
+    if (!userId || !houseId || !authToken) return;
+    const ch = createChannel(`task-assignees:${houseId}`, 'TaskAssignee', '', refetchTasks);
     return () => {
-      supabase.removeChannel(channel);
-      channelsRef.current = channelsRef.current.filter((n) => n !== channelName);
+      if (ch) supabase!.removeChannel(ch);
+      channelsRef.current = channelsRef.current.filter((n) => n !== `task-assignees:${houseId}`);
     };
-  }, [userId, houseId, refetchTasks]);
+  }, [userId, houseId, authToken, refetchTasks, createChannel]);
 
   // ─── HouseMember Realtime ───
   useEffect(() => {
-    if (!userId || !houseId || !supabase) return;
-
-    const channelName = `house-members:${houseId}`;
-    channelsRef.current.push(channelName);
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'HouseMember',
-          filter: `houseId=eq.${houseId}`,
-        },
-        () => {
-          setTimeout(() => {
-            refetchHouseMembers();
-            refetchTasks();
-          }, 200);
-        },
-      )
-      .subscribe();
-
+    if (!userId || !houseId || !authToken) return;
+    const ch = createChannel(
+      `house-members:${houseId}`,
+      'HouseMember',
+      `houseId=eq.${houseId}`,
+      () => { refetchHouseMembers(); refetchTasks(); }
+    );
     return () => {
-      supabase.removeChannel(channel);
-      channelsRef.current = channelsRef.current.filter((n) => n !== channelName);
+      if (ch) supabase!.removeChannel(ch);
+      channelsRef.current = channelsRef.current.filter((n) => n !== `house-members:${houseId}`);
     };
-  }, [userId, houseId, refetchHouseMembers, refetchTasks]);
+  }, [userId, houseId, authToken, refetchHouseMembers, refetchTasks, createChannel]);
 
   // ─── Friendship Realtime ───
   useEffect(() => {
-    if (!userId || !supabase) return;
+    if (!userId || !authToken) return;
 
-    const ch1Name = `friends-from:${userId}`;
-    channelsRef.current.push(ch1Name);
-    const ch1 = supabase
-      .channel(ch1Name)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'Friendship',
-          filter: `userId=eq.${userId}`,
-        },
-        () => {
-          setTimeout(refetchFriends, 200);
-        },
-      )
-      .subscribe();
-
-    const ch2Name = `friends-to:${userId}`;
-    channelsRef.current.push(ch2Name);
-    const ch2 = supabase
-      .channel(ch2Name)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'Friendship',
-          filter: `friendId=eq.${userId}`,
-        },
-        () => {
-          setTimeout(refetchFriends, 200);
-        },
-      )
-      .subscribe();
+    const ch1 = createChannel(
+      `friends-from:${userId}`,
+      'Friendship',
+      `userId=eq.${userId}`,
+      refetchFriends
+    );
+    const ch2 = createChannel(
+      `friends-to:${userId}`,
+      'Friendship',
+      `friendId=eq.${userId}`,
+      refetchFriends
+    );
 
     return () => {
-      supabase.removeChannel(ch1);
-      supabase.removeChannel(ch2);
+      if (ch1) supabase!.removeChannel(ch1);
+      if (ch2) supabase!.removeChannel(ch2);
       channelsRef.current = channelsRef.current.filter(
-        (n) => n !== ch1Name && n !== ch2Name
+        (n) => n !== `friends-from:${userId}` && n !== `friends-to:${userId}`
       );
     };
-  }, [userId, refetchFriends]);
+  }, [userId, authToken, refetchFriends, createChannel]);
 
   // ─── Cleanup all channels on unmount ───
   useEffect(() => {
@@ -249,12 +222,3 @@ export function useRealtime() {
     };
   }, []);
 }
-
-async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
-  const token = useAppStore.getState().authToken;
-  const headers = new Headers(init?.headers);
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  return fetch(url, { ...init, headers });
-}
-
-export { fetchWithAuth };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAppStore, authFetch } from '@/lib/store';
 import { SplashScreen } from '@/components/screens/splash';
@@ -21,7 +21,7 @@ const screenVariants = {
 function ScreenRouter() {
   const { screen, currentUser } = useAppStore();
 
-  // Global Realtime subscriptions — always active after login
+  // Global Realtime subscriptions + polling — always active after login
   useRealtime();
 
   const showTabBar = currentUser && ['tasks', 'profile'].includes(screen);
@@ -81,20 +81,36 @@ function Toast() {
 export default function Home() {
   const { setCurrentUser, setActiveHouse, setScreen, setAuthToken, darkMode, setDarkMode } = useAppStore();
   const [ready, setReady] = useState(false);
+  const themeInitialized = useRef(false);
 
-  // Toggle dark class on <html>
+  // ─── Sync darkMode store → DOM (always runs when darkMode changes) ───
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
-  // Restore session: user ID from localStorage, JWT from API
+  // ─── Detect Telegram theme ONCE on mount ───
+  useEffect(() => {
+    if (themeInitialized.current) return;
+    themeInitialized.current = true;
+
+    const tg = window.Telegram?.WebApp;
+    if (tg?.colorScheme) {
+      const isDark = tg.colorScheme === 'dark';
+      setDarkMode(isDark);
+    }
+    // Note: we do NOT listen for themeChanged events.
+    // The user can manually toggle dark mode in profile,
+    // and that choice should not be overridden by Telegram.
+  }, [setDarkMode]);
+
+  // ─── Restore session: user ID from localStorage, JWT from API ───
   useEffect(() => {
     const initApp = async () => {
       const savedUserId = localStorage.getItem('kinnect_user_id');
 
       if (savedUserId) {
         try {
-          // M4 fix: Re-authenticate to get fresh JWT (not trusting old state)
+          // Re-authenticate to get fresh JWT (not trusting old state)
           const res = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -106,7 +122,7 @@ export default function Home() {
             setCurrentUser(user);
             setAuthToken(token);
 
-            const housesRes = await authFetch(`/api/houses`);
+            const housesRes = await authFetch('/api/houses');
             if (housesRes.ok) {
               const { houses } = await housesRes.json();
               const safeHouses = Array.isArray(houses) ? houses : [];

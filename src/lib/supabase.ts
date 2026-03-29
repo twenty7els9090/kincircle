@@ -16,16 +16,11 @@ export const supabase =
           autoRefreshToken: false,
           detectSessionInUrl: false,
         },
+        realtime: {
+          // Use custom JWT per-channel instead of global setAuth
+          params: {
+            eventsPerSecond: 10,
+          },
+        },
       })
     : null;
-
-/**
- * Set custom JWT on the realtime channel so RLS policies are enforced.
- * Call this after successful auth.
- */
-export function setRealtimeAuth(token: string): void {
-  if (supabase) {
-    // @ts-expect-error — setAuth exists on realtime but not typed
-    supabase.realtime.setAuth(token);
-  }
-}

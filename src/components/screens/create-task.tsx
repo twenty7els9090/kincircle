@@ -6,7 +6,6 @@ import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
-import { markLocalAction } from '@/lib/realtime-guard';
 import type { TaskCategory, User } from '@/lib/types';
 
 const CATEGORY_LABELS: Record<string, string> = { shopping: 'Покупки', chores: 'Домашние дела' };
@@ -49,8 +48,6 @@ export function CreateTaskScreen() {
     if (!title.trim() || !currentUser || !activeHouse) return;
     setLoading(true);
     try {
-      markLocalAction();
-
       const res = await authFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify({
