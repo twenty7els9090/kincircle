@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 const AVATAR_COLORS = [
   { bg: '#E3F9E5', fg: '#1A7F37' },
@@ -37,43 +37,35 @@ interface AvatarCircleProps {
 export function AvatarCircle({ userId, displayName, size = 36, fontSize = 12, avatarUrl }: AvatarCircleProps) {
   const color = useMemo(() => getColor(userId), [userId]);
   const initials = useMemo(() => getInitials(displayName), [displayName]);
+  const [failed, setFailed] = useState(false);
+
+  // Proxy through our API to avoid Telegram CORS
+  const src = avatarUrl && !failed ? `/api/avatar?url=${encodeURIComponent(avatarUrl)}` : null;
+
+  if (!src) {
+    return (
+      <div
+        className="flex items-center justify-center rounded-full shrink-0"
+        style={{ width: size, height: size, backgroundColor: color.bg }}
+      >
+        <span style={{ color: color.fg, fontSize, fontWeight: 600 }}>
+          {initials}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
       className="flex items-center justify-center rounded-full shrink-0 overflow-hidden"
       style={{ width: size, height: size }}
     >
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt={displayName}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // Fallback to initials on error
-            const target = e.currentTarget;
-            target.style.display = 'none';
-            const parent = target.parentElement;
-            if (parent) {
-              parent.style.backgroundColor = color.bg;
-              const span = document.createElement('span');
-              span.textContent = initials;
-              span.style.color = color.fg;
-              span.style.fontSize = `${fontSize}px`;
-              span.style.fontWeight = '600';
-              parent.appendChild(span);
-            }
-          }}
-        />
-      ) : (
-        <div
-          className="flex items-center justify-center rounded-full"
-          style={{ width: size, height: size, backgroundColor: color.bg }}
-        >
-          <span style={{ color: color.fg, fontSize, fontWeight: 600 }}>
-            {initials}
-          </span>
-        </div>
-      )}
+      <img
+        src={src}
+        alt={displayName}
+        className="w-full h-full object-cover"
+        onError={() => setFailed(true)}
+      />
     </div>
   );
 }
