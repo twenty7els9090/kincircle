@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Home, UserPlus, Moon, Sun, LogOut, Search, Trash2, Copy, Check, X, ChevronRight, Plus, Users } from 'lucide-react';
+import { Home, UserPlus, Moon, Sun, LogOut, Search, Trash2, Copy, Check, X, Plus, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
@@ -273,149 +273,169 @@ export function ProfileScreen() {
         </div>
       </div>
 
-      {/* Friend search */}
+      {/* Friends — unified section */}
       <div className="px-4 mb-6">
-        <p className="ios-section-header mb-2 px-1">НАЙТИ ДРУГА</p>
-        <div className="ios-card p-3">
-          {!showSearch ? (
-            <button
-              onClick={() => setShowSearch(true)}
-              className="w-full flex items-center gap-3 py-1"
-            >
-              <div className="w-[32px] h-[32px] rounded-full flex items-center justify-center" style={{ background: '#007AFF' }}>
-                <UserPlus size={16} color="white" strokeWidth={2} />
-              </div>
-              <div className="text-left">
+        <p className="ios-section-header mb-2 px-1">ДРУЗЬЯ{friends.length > 0 ? ` · ${friends.length}` : ''}</p>
+        <div className="ios-card">
+          {/* Search row at top */}
+          <div className="px-4 pt-3 pb-2" style={{ borderBottom: !showSearch && friends.length > 0 ? '0.5px solid rgba(0,0,0,0.06)' : 'none' }}>
+            {!showSearch ? (
+              <button
+                onClick={() => setShowSearch(true)}
+                className="w-full flex items-center gap-3 py-1"
+              >
+                <div className="w-[32px] h-[32px] rounded-full flex items-center justify-center" style={{ background: '#007AFF' }}>
+                  <UserPlus size={16} color="white" strokeWidth={2} />
+                </div>
                 <span className="text-[15px] font-medium" style={{ color: 'var(--ios-text-primary)' }}>Добавить друга</span>
-                <p className="text-[12px]" style={{ color: '#8E8E93' }}>По никнейму или коду</p>
-              </div>
-              <ChevronRight size={18} color="#C7C7CC" className="ml-auto" />
-            </button>
-          ) : (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <input
-                  type="text"
-                  className="ios-input flex-1"
-                  placeholder="@username или код"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  autoFocus
-                />
+              </button>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="ios-input flex-1"
+                    placeholder="@username или код"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSearch}
+                    className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center shrink-0"
+                    style={{ background: '#007AFF' }}
+                    disabled={searching}
+                  >
+                    <Search size={18} color="white" strokeWidth={2.5} />
+                  </button>
+                </div>
                 <button
-                  onClick={handleSearch}
-                  className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center shrink-0"
-                  style={{ background: '#007AFF' }}
-                  disabled={searching}
+                  onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }}
+                  className="text-[13px] font-medium mt-1" style={{ color: '#007AFF' }}
                 >
-                  <Search size={18} color="white" strokeWidth={2.5} />
+                  Отмена
+                </button>
+
+                {searchResults.length > 0 && (
+                  <div className="mt-2 space-y-0">
+                    {searchResults.map((user) => (
+                      <div key={user.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
+                        <AvatarCircle userId={user.id} displayName={user.displayName} size={34} fontSize={11} avatarUrl={user.avatarUrl} />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[14px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{user.displayName}</span>
+                          <span className="text-[12px]" style={{ color: '#8E8E93' }}>
+                            {user.username ? `@${user.username}` : ''}{user.username && user.friendCode ? ' · ' : ''}{user.friendCode ? `Код: ${user.friendCode}` : ''}
+                          </span>
+                        </div>
+                        {user.friendshipStatus === 'accepted' && (
+                          <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#E3F9E5', color: '#1A7F37' }}>Друзья</span>
+                        )}
+                        {user.friendshipStatus === 'pending' && (
+                          <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#FFF8E1', color: '#B07800' }}>Ожидает</span>
+                        )}
+                        {!user.friendshipStatus && (
+                          <button
+                            onClick={() => sendRequest(user.id)}
+                            className="px-3 py-1.5 rounded-full"
+                            style={{ background: '#007AFF' }}
+                          >
+                            <span className="text-white text-[12px] font-semibold">Добавить</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {searchQuery && searchResults.length === 0 && !searching && (
+                  <div className="text-center py-3">
+                    <p className="text-[13px]" style={{ color: '#8E8E93' }}>Пользователи не найдены</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Incoming requests */}
+          {incoming.length > 0 && (
+            <>
+              {friends.length > 0 && <div className="ios-separator mx-4" />}
+              {incoming.map((req) => (
+                <div key={req.id}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} avatarUrl={req.user.avatarUrl} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{req.user.displayName}</span>
+                      {req.user.username && <span className="ios-meta">@{req.user.username}</span>}
+                    </div>
+                    <button
+                      onClick={() => rejectRequest(req.id)}
+                      className="w-[32px] h-[32px] rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: '#FFF0F0' }}
+                    >
+                      <X size={14} color="#FF3B30" strokeWidth={2.5} />
+                    </button>
+                    <button
+                      onClick={() => acceptRequest(req.id)}
+                      className="px-3 py-[6px] rounded-full shrink-0"
+                      style={{ background: '#007AFF' }}
+                    >
+                      <span className="text-white text-[12px] font-semibold">Принять</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Sent requests */}
+          {sent.length > 0 && (
+            <>
+              {(friends.length > 0 || incoming.length > 0) && <div className="ios-separator mx-4" />}
+              {sent.map((req) => (
+                <div key={req.id}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} avatarUrl={req.user.avatarUrl} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{req.user.displayName}</span>
+                      {req.user.username && <span className="ios-meta">@{req.user.username}</span>}
+                    </div>
+                    <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#FFF8E1', color: '#B07800' }}>Ожидает</span>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Friends list */}
+          {friends.map((friend, i) => (
+            <div key={friend.id}>
+              <div className="flex items-center gap-3 px-4 py-3" style={{ borderTop: (i === 0 && (incoming.length > 0 || sent.length > 0)) ? 'none' : '0.5px solid rgba(0,0,0,0.06)' }}>
+                <AvatarCircle userId={friend.id} displayName={friend.displayName} size={36} fontSize={12} avatarUrl={friend.avatarUrl} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{friend.displayName}</span>
+                  {friend.username && <span className="ios-meta">@{friend.username}</span>}
+                </div>
+                <button
+                  onClick={() => handleDeleteFriend(friend)}
+                  disabled={deletingFriendId === friend.id}
+                  className="w-[32px] h-[32px] rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: '#FFF0F0' }}
+                >
+                  <Trash2 size={14} color="#FF3B30" strokeWidth={2} />
                 </button>
               </div>
-              <button
-                onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }}
-                className="text-[13px] font-medium" style={{ color: '#007AFF' }}
-              >
-                Отмена
-              </button>
+            </div>
+          ))}
 
-              {searchResults.length > 0 && (
-                <div className="mt-3 space-y-0">
-                  {searchResults.map((user) => (
-                    <div key={user.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
-                      <AvatarCircle userId={user.id} displayName={user.displayName} size={34} fontSize={11} avatarUrl={user.avatarUrl} />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[14px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{user.displayName}</span>
-                        <span className="text-[12px]" style={{ color: '#8E8E93' }}>
-                          {user.username ? `@${user.username}` : ''}{user.username && user.friendCode ? ' · ' : ''}{user.friendCode ? `Код: ${user.friendCode}` : ''}
-                        </span>
-                      </div>
-                      {user.friendshipStatus === 'accepted' && (
-                        <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#E3F9E5', color: '#1A7F37' }}>Друзья</span>
-                      )}
-                      {user.friendshipStatus === 'pending' && (
-                        <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#FFF8E1', color: '#B07800' }}>Ожидает</span>
-                      )}
-                      {!user.friendshipStatus && (
-                        <button
-                          onClick={() => sendRequest(user.id)}
-                          className="px-3 py-1.5 rounded-full"
-                          style={{ background: '#007AFF' }}
-                        >
-                          <span className="text-white text-[12px] font-semibold">Добавить</span>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {searchQuery && searchResults.length === 0 && !searching && (
-                <div className="text-center py-4">
-                  <p className="text-[13px]" style={{ color: '#8E8E93' }}>Пользователи не найдены</p>
-                </div>
-              )}
+          {friends.length === 0 && incoming.length === 0 && sent.length === 0 && !showSearch && (
+            <div className="px-4 py-4 text-center">
+              <p className="ios-meta">Пока нет друзей</p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Incoming requests */}
-      {incoming.length > 0 && (
-        <div className="px-4 mb-6">
-          <p className="ios-section-header mb-2 px-1">ВХОДЯЩИЕ ЗАПРОСЫ · {incoming.length}</p>
-          <div className="ios-card">
-            {incoming.map((req, i) => (
-              <div key={req.id}>
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} avatarUrl={req.user.avatarUrl} />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{req.user.displayName}</span>
-                    {req.user.username && <span className="ios-meta">@{req.user.username}</span>}
-                  </div>
-                  <button
-                    onClick={() => rejectRequest(req.id)}
-                    className="w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: '#FFF0F0' }}
-                  >
-                    <X size={16} color="#FF3B30" strokeWidth={2.5} />
-                  </button>
-                  <button
-                    onClick={() => acceptRequest(req.id)}
-                    className="px-3 py-[6px] rounded-full shrink-0"
-                    style={{ background: '#007AFF' }}
-                  >
-                    <span className="text-white text-[13px] font-semibold">Принять</span>
-                  </button>
-                </div>
-                {i < incoming.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Sent requests */}
-      {sent.length > 0 && (
-        <div className="px-4 mb-6">
-          <p className="ios-section-header mb-2 px-1">ОТПРАВЛЕННЫЕ ЗАПРОСЫ · {sent.length}</p>
-          <div className="ios-card">
-            {sent.map((req, i) => (
-              <div key={req.id}>
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <AvatarCircle userId={req.user.id} displayName={req.user.displayName} size={36} fontSize={12} avatarUrl={req.user.avatarUrl} />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{req.user.displayName}</span>
-                    {req.user.username && <span className="ios-meta">@{req.user.username}</span>}
-                  </div>
-                  <span className="text-[11px] font-semibold px-2 py-1 rounded-[6px]" style={{ background: '#FFF8E1', color: '#B07800' }}>Ожидает</span>
-                </div>
-                {i < sent.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Group invites */}
       {groupInvites.length > 0 && (
@@ -442,10 +462,10 @@ export function ProfileScreen() {
                         .then(() => setGroupInvites((prev) => prev.filter((g) => g.id !== invite.id)))
                         .catch(() => {});
                     }}
-                    className="w-[36px] h-[36px] rounded-full flex items-center justify-center shrink-0"
+                    className="w-[32px] h-[32px] rounded-full flex items-center justify-center shrink-0"
                     style={{ background: '#FFF0F0' }}
                   >
-                    <X size={16} color="#FF3B30" strokeWidth={2.5} />
+                    <X size={14} color="#FF3B30" strokeWidth={2.5} />
                   </button>
                   <button
                     onClick={() => {
@@ -454,7 +474,7 @@ export function ProfileScreen() {
                           if (res.ok) {
                             showToast('Вы вступили в группу!');
                             setGroupInvites((prev) => prev.filter((g) => g.id !== invite.id));
-                            fetchProfileData(); // refresh houses
+                            fetchProfileData();
                           }
                         })
                         .catch(() => {});
@@ -462,7 +482,7 @@ export function ProfileScreen() {
                     className="px-3 py-[6px] rounded-full shrink-0"
                     style={{ background: '#007AFF' }}
                   >
-                    <span className="text-white text-[13px] font-semibold">Вступить</span>
+                    <span className="text-white text-[12px] font-semibold">Вступить</span>
                   </button>
                 </div>
                 {i < groupInvites.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
@@ -514,38 +534,6 @@ export function ProfileScreen() {
           {houses.length === 0 && (
             <div className="px-4 py-4 text-center">
               <p className="ios-meta">Пока нет групп</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Friends */}
-      <div className="px-4 mb-6">
-        <p className="ios-section-header mb-2 px-1">ДРУЗЬЯ · {friends.length}</p>
-        <div className="ios-card">
-          {friends.map((friend, i) => (
-            <div key={friend.id}>
-              <div className="flex items-center gap-3 px-4 py-3">
-                <AvatarCircle userId={friend.id} displayName={friend.displayName} size={36} fontSize={12} avatarUrl={friend.avatarUrl} />
-                <div className="flex-1 min-w-0">
-                  <span className="text-[15px] font-medium block truncate" style={{ color: 'var(--ios-text-primary)' }}>{friend.displayName}</span>
-                  {friend.username && <span className="ios-meta">@{friend.username}</span>}
-                </div>
-                <button
-                  onClick={() => handleDeleteFriend(friend)}
-                  disabled={deletingFriendId === friend.id}
-                  className="w-[32px] h-[32px] rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: '#FFF0F0' }}
-                >
-                  <Trash2 size={14} color="#FF3B30" strokeWidth={2} />
-                </button>
-              </div>
-              {i < friends.length - 1 && <div className="ios-separator ml-[52px] mr-4" />}
-            </div>
-          ))}
-          {friends.length === 0 && incoming.length === 0 && sent.length === 0 && (
-            <div className="px-4 py-4 text-center">
-              <p className="ios-meta">Пока нет друзей</p>
             </div>
           )}
         </div>
