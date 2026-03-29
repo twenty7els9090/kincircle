@@ -57,7 +57,7 @@ function formatPrice(raw: string | null): string | null {
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 500;
+const CARD_HEIGHT = 470;
 const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════
@@ -159,7 +159,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-            className="text-[34px] font-semibold leading-[1.15] tracking-[-0.01em] min-w-0"
+            className="text-[32px] font-semibold leading-[1.15] tracking-[-0.01em] min-w-0"
             style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
           >
             <motion.p
