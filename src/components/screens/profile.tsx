@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Home, UserPlus, Moon, Sun, LogOut, Search, Trash2, Copy, Check, X, Plus, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, authFetch } from '@/lib/store';
 import type { CachedFriend, CachedHouse, CachedGroupInvite } from '@/lib/store';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
@@ -232,8 +233,38 @@ export function ProfileScreen() {
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh', paddingBottom: 80 }}>
       {/* Header */}
-      <div className="px-4 pb-4" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
+      <div className="px-4 pb-4 flex items-center justify-between" style={{ paddingTop: 'max(77px, env(safe-area-inset-top, 77px))' }}>
         <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Профиль</h1>
+        <button
+          onClick={toggleDarkMode}
+          className="w-[44px] h-[44px] rounded-full flex items-center justify-center active:opacity-60 transition-opacity"
+          style={{ background: 'var(--ios-toggle-bg)' }}
+          aria-label={darkMode ? 'Светлый режим' : 'Ночной режим'}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {darkMode ? (
+              <motion.div
+                key="moon"
+                initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              >
+                <Moon size={20} color="#007AFF" strokeWidth={2} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="sun"
+                initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              >
+                <Sun size={20} color="#FF9500" strokeWidth={2} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </button>
       </div>
 
       {/* User card + friendCode */}
@@ -535,38 +566,6 @@ export function ProfileScreen() {
               <p className="ios-meta">Пока нет групп</p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Settings */}
-      <div className="px-4 mb-6">
-        <p className="ios-section-header mb-2 px-1">НАСТРОЙКИ</p>
-        <div className="ios-card">
-          <button
-            onClick={toggleDarkMode}
-            className="w-full flex items-center justify-between px-4 py-3"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center" style={{ background: darkMode ? 'rgba(0,122,255,0.15)' : '#F2F2F7' }}>
-                {darkMode ? <Moon size={16} color="#007AFF" strokeWidth={2} /> : <Sun size={16} color="#8E8E93" strokeWidth={2} />}
-              </div>
-              <span className="text-[15px] font-medium" style={{ color: 'var(--ios-text-primary)' }}>Ночной режим</span>
-            </div>
-            <div
-              className="relative rounded-full transition-colors duration-300"
-              style={{ width: 51, height: 31, background: darkMode ? '#007AFF' : '#E5E5EA' }}
-            >
-              <div
-                className="absolute top-[2px] rounded-full bg-white transition-all duration-300"
-                style={{
-                  width: 27,
-                  height: 27,
-                  left: darkMode ? 22 : 2,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                }}
-              />
-            </div>
-          </button>
         </div>
       </div>
 
