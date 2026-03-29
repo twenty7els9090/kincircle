@@ -36,8 +36,6 @@ export function ProfileScreen() {
   const [showCreateHouse, setShowCreateHouse] = useState(false);
   const [newHouseName, setNewHouseName] = useState('');
   const [creatingHouse, setCreatingHouse] = useState(false);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-
   const userId = currentUser?.id;
 
   const fetchProfileData = useCallback(async (signal?: AbortSignal) => {
@@ -59,16 +57,17 @@ export function ProfileScreen() {
       setCachedIncoming(Array.isArray(reqs) ? reqs : []);
       setCachedSent(Array.isArray(sentReqs) ? sentReqs : []);
       setCachedGroupInvites(Array.isArray(invites) ? invites : []);
-      setProfileLoaded(true);
+      useAppStore.getState().setProfileDataFetched(true);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
     }
   }, [userId, setCachedHouses, setCachedFriends, setCachedIncoming, setCachedSent, setCachedGroupInvites]);
 
-  // Only fetch if not already cached
+  // Only fetch if not already cached (flag lives in store, survives remounts)
+  const profileDataFetched = useAppStore((s) => s.profileDataFetched);
   useEffect(() => {
-    if (!profileLoaded && userId) fetchProfileData();
-  }, [profileLoaded, userId, fetchProfileData]);
+    if (!profileDataFetched && userId) fetchProfileData();
+  }, [profileDataFetched, userId, fetchProfileData]);
 
   // Listen for realtime friend updates
   useEffect(() => {

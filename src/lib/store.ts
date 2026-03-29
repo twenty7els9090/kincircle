@@ -59,6 +59,47 @@ export interface CachedGroupInvite {
   inviter: { id: string; displayName: string; username: string | null };
 }
 
+// ─── Friends wishlists cache (for the "Друзья" tab in wishlist) ───
+export interface CachedFriendsWishList {
+  id: string;
+  userId: string;
+  isPublic: boolean;
+  createdAt: string;
+  items: CachedWishItem[];
+  user: { id: string; displayName: string; avatarUrl: string | null };
+}
+
+// ─── House members cache ───
+export interface CachedHouseMember {
+  id: string;
+  userId: string;
+  role: string;
+  user: User;
+}
+
+// ─── Friend wishlist items cache ───
+export interface CachedFriendWishlistItems {
+  id: string;
+  userId: string;
+  title: string;
+  photoUrl?: string | null;
+  price?: string | null;
+  link?: string | null;
+  comment?: string | null;
+  isPublic: boolean;
+  reservedBy?: string | null;
+  createdAt: string;
+}
+
+// ─── Pending invite cache ───
+export interface CachedPendingInvite {
+  id: string;
+  userId: string;
+  status: string;
+  createdAt: string;
+  recipient: { id: string; displayName: string; username: string | null };
+}
+
 interface AppState {
   // Auth
   currentUser: User | null;
@@ -85,11 +126,29 @@ interface AppState {
   tasksLoadedHouseId: string | null;
   setTasksLoadedHouseId: (id: string | null) => void;
 
-  // Wishlist cache
+  // Wishlist cache (own wishlist)
   wishList: CachedWishList | null;
   setWishList: (wl: CachedWishList | null) => void;
 
+  // Friends wishlists cache (the "Друзья" tab)
+  cachedFriendsWishlists: CachedFriendsWishList[];
+  setCachedFriendsWishlists: (lists: CachedFriendsWishList[]) => void;
+
+  // Friend wishlist items cache (keyed by friendId)
+  cachedFriendWishlistMap: Record<string, { items: CachedFriendWishlistItems[]; displayName: string }>;
+  setCachedFriendWishlistMap: (map: Record<string, { items: CachedFriendWishlistItems[]; displayName: string }>) => void;
+
+  // House members cache (keyed by houseId)
+  cachedHouseMembersMap: Record<string, CachedHouseMember[]>;
+  setCachedHouseMembersMap: (map: Record<string, CachedHouseMember[]>) => void;
+
+  // House pending invites cache (keyed by houseId)
+  cachedHousePendingInvitesMap: Record<string, CachedPendingInvite[]>;
+  setCachedHousePendingInvitesMap: (map: Record<string, CachedPendingInvite[]>) => void;
+
   // Profile cache
+  profileDataFetched: boolean;
+  setProfileDataFetched: (v: boolean) => void;
   cachedFriends: CachedFriend[];
   setCachedFriends: (f: CachedFriend[]) => void;
   cachedIncoming: CachedIncomingReq[];
@@ -146,11 +205,29 @@ export const useAppStore = create<AppState>((set) => ({
   tasksLoadedHouseId: null,
   setTasksLoadedHouseId: (id) => set({ tasksLoadedHouseId: id }),
 
-  // Wishlist
+  // Wishlist (own)
   wishList: null,
   setWishList: (wl) => set({ wishList: wl }),
 
+  // Friends wishlists
+  cachedFriendsWishlists: [],
+  setCachedFriendsWishlists: (lists) => set({ cachedFriendsWishlists: Array.isArray(lists) ? lists : [] }),
+
+  // Friend wishlist items (keyed by friendId)
+  cachedFriendWishlistMap: {},
+  setCachedFriendWishlistMap: (map) => set({ cachedFriendWishlistMap: map }),
+
+  // House members (keyed by houseId)
+  cachedHouseMembersMap: {},
+  setCachedHouseMembersMap: (map) => set({ cachedHouseMembersMap: map }),
+
+  // House pending invites (keyed by houseId)
+  cachedHousePendingInvitesMap: {},
+  setCachedHousePendingInvitesMap: (map) => set({ cachedHousePendingInvitesMap: map }),
+
   // Profile
+  profileDataFetched: false,
+  setProfileDataFetched: (v) => set({ profileDataFetched: v }),
   cachedFriends: [],
   setCachedFriends: (f) => set({ cachedFriends: f }),
   cachedIncoming: [],

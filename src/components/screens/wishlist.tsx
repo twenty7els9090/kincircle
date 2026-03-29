@@ -366,30 +366,38 @@ function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, dire
 
 function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => void }) {
   const { currentUser, darkMode, activeHouse } = useAppStore();
-  const [friendsLists, setFriendsLists] = useState<FriendsWishList[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedFriendsWishlists = useAppStore((s) => s.cachedFriendsWishlists);
+  const setCachedFriendsWishlists = useAppStore((s) => s.setCachedFriendsWishlists);
+  const [loading, setLoading] = useState(cachedFriendsWishlists.length === 0);
 
-  const fetchFriendsLists = useCallback(async () => {
+  const fetchFriendsLists = useCallback(async (showSpinner = false) => {
     if (!currentUser) return;
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     try {
       const params = new URLSearchParams({ userId: currentUser.id });
       if (activeHouse) params.set('houseId', activeHouse.id);
       const res = await authFetch(`/api/wishlist/friends?${params.toString()}`);
-      if (res.ok) { const data = await res.json(); setFriendsLists(Array.isArray(data.friendsLists) ? data.friendsLists : []); }
+      if (res.ok) {
+        const data = await res.json();
+        const lists = Array.isArray(data.friendsLists) ? data.friendsLists : [];
+        setCachedFriendsWishlists(lists);
+      }
     } catch { /* silent */ } finally { setLoading(false); }
-  }, [currentUser, activeHouse]);
+  }, [currentUser, activeHouse, setCachedFriendsWishlists]);
 
-  useEffect(() => { fetchFriendsLists(); }, [fetchFriendsLists]);
+  // Only fetch if cache is empty
   useEffect(() => {
-    const h = () => fetchFriendsLists();
+    if (cachedFriendsWishlists.length === 0) fetchFriendsLists(true);
+  }, [cachedFriendsWishlists.length, fetchFriendsLists]);
+  useEffect(() => {
+    const h = () => fetchFriendsLists(false);
     window.addEventListener('kinnect:wishlist-changed', h);
     return () => window.removeEventListener('kinnect:wishlist-changed', h);
   }, [fetchFriendsLists]);
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} /></div>;
+  if (loading && cachedFriendsWishlists.length === 0) return <div className="flex items-center justify-center py-20"><div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} /></div>;
 
-  if (friendsLists.length === 0) {
+  if (cachedFriendsWishlists.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-8 py-16">
         <div className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-4" style={{ background: darkMode ? '#2C2C2E' : '#F2F2F7' }}>
@@ -403,7 +411,7 @@ function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => vo
 
   return (
     <div className="px-4 pb-20 space-y-4">
-      {friendsLists.map((fl) => (
+      {cachedFriendsWishlists.map((fl) => (
         <FriendMiniStack key={fl.id} wishList={fl} dark={darkMode} onPress={() => onFriendPress(fl.userId)} />
       ))}
     </div>

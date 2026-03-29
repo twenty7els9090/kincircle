@@ -13,6 +13,8 @@ const UNIT_OPTIONS = ['шт', 'кг', 'г', 'л', 'мл', 'уп'];
 
 export function CreateTaskScreen() {
   const { currentUser, activeHouse, activeCategory, popScreen, showToast, darkMode } = useAppStore();
+  const cachedHouseMembersMap = useAppStore((s) => s.cachedHouseMembersMap);
+  const setCachedHouseMembersMap = useAppStore((s) => s.setCachedHouseMembersMap);
 
   const [category, setCategory] = useState<TaskCategory>(activeCategory);
   const [title, setTitle] = useState('');
@@ -26,6 +28,9 @@ export function CreateTaskScreen() {
   const [loading, setLoading] = useState(false);
   const [showAssignPicker, setShowAssignPicker] = useState(false);
 
+  const houseId = activeHouse?.id || '';
+  const cachedMembers = houseId ? cachedHouseMembersMap[houseId] : undefined;
+
   const safeMembers = Array.isArray(members) ? members : [];
   const otherMembers = safeMembers.filter((m) => m.id !== currentUser?.id);
   const assignedMembers = safeMembers.filter((m) => assignedTo.includes(m.id));
@@ -36,13 +41,22 @@ export function CreateTaskScreen() {
 
   useEffect(() => { setCategory(activeCategory); }, [activeCategory]);
 
+  // Restore from cache, fetch only if no cache
   useEffect(() => {
-    if (!currentUser || !activeHouse) return;
-    authFetch(`/api/houses/${activeHouse.id}/members`)
-      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(({ members }) => setMembers(Array.isArray(members) ? members.map((m: { user: User }) => m.user).filter(Boolean) : []))
-      .catch(() => {});
-  }, [currentUser, activeHouse]);
+    if (cachedMembers) {
+      setMembers(cachedMembers.map((m) => m.user).filter(Boolean));
+    } else if (currentUser && activeHouse) {
+      authFetch(`/api/houses/${activeHouse.id}/members`)
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(({ members: m }) => {
+          const arr = Array.isArray(m) ? m : [];
+          setMembers(arr.map((m: { user: User }) => m.user).filter(Boolean));
+          const map = useAppStore.getState().cachedHouseMembersMap;
+          setCachedHouseMembersMap({ ...map, [activeHouse.id]: arr });
+        })
+        .catch(() => {});
+    }
+  }, [currentUser, activeHouse, cachedMembers, setCachedHouseMembersMap]);
 
   const handleCreate = async () => {
     if (!title.trim() || !currentUser || !activeHouse) {

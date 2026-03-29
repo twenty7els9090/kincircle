@@ -6,20 +6,12 @@ import { useAppStore, authFetch } from '@/lib/store';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
 import { ConfirmationDialog } from '@/components/shared/confirmation-dialog';
-import type { User } from '@/lib/types';
+import type { User, CachedHouseMember, CachedPendingInvite } from '@/lib/store';
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'админ',
   member: 'участник',
 };
-
-interface PendingInvite {
-  id: string;
-  userId: string;
-  status: string;
-  createdAt: string;
-  recipient: { id: string; displayName: string; username: string | null };
-}
 
 export function HouseSettingsScreen() {
   const {
@@ -31,9 +23,14 @@ export function HouseSettingsScreen() {
     showToast,
   } = useAppStore();
 
-  const [members, setMembers] = useState<{ id: string; userId: string; role: string; user: User }[]>([]);
+  const cachedHouseMembersMap = useAppStore((s) => s.cachedHouseMembersMap);
+  const setCachedHouseMembersMap = useAppStore((s) => s.setCachedHouseMembersMap);
+  const cachedHousePendingInvitesMap = useAppStore((s) => s.cachedHousePendingInvitesMap);
+  const setCachedHousePendingInvitesMap = useAppStore((s) => s.setCachedHousePendingInvitesMap);
+
+  const [members, setMembers] = useState<CachedHouseMember[]>([]);
   const [friends, setFriends] = useState<User[]>([]);
-  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<CachedPendingInvite[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [houseName, setHouseName] = useState('');
@@ -44,21 +41,32 @@ export function HouseSettingsScreen() {
   const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
 
   const isOwner = currentUser?.id === activeHouse?.ownerId;
+  const houseId = activeHouse?.id || '';
 
-  const fetchMembers = useCallback(async () => {
+  // Restore from cache
+  const cachedMembers = houseId ? cachedHouseMembersMap[houseId] : undefined;
+  const cachedInvites = houseId ? cachedHousePendingInvitesMap[houseId] : undefined;
+  const hasMemberCache = !!cachedMembers;
+  const hasInviteCache = !!cachedInvites;
+
+  const fetchMembers = useCallback(async (showSpinner = false) => {
     if (!currentUser || !activeHouse) return;
-    setIsLoadingMembers(true);
+    if (showSpinner) setIsLoadingMembers(true);
     try {
       const res = await authFetch(`/api/houses/${activeHouse.id}/members`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { members: m } = await res.json();
-      setMembers(Array.isArray(m) ? m : []);
+      const arr = Array.isArray(m) ? m : [];
+      setMembers(arr);
+      // Update cache
+      const map = useAppStore.getState().cachedHouseMembersMap;
+      setCachedHouseMembersMap({ ...map, [activeHouse.id]: arr });
     } catch {
       setMembers([]);
     } finally {
       setIsLoadingMembers(false);
     }
-  }, [currentUser, activeHouse]);
+  }, [currentUser, activeHouse, setCachedHouseMembersMap]);
 
   const fetchFriends = useCallback(async () => {
     if (!currentUser) return;
@@ -72,23 +80,35 @@ export function HouseSettingsScreen() {
     }
   }, [currentUser]);
 
-  const fetchPendingInvites = useCallback(async () => {
+  const fetchPendingInvites = useCallback(async (showSpinner = false) => {
     if (!currentUser || !activeHouse) return;
     try {
       const res = await authFetch(`/api/group-invites?houseId=${activeHouse.id}`);
       if (!res.ok) return;
       const { invites } = await res.json();
-      setPendingInvites(Array.isArray(invites) ? invites : []);
+      const arr = Array.isArray(invites) ? invites : [];
+      setPendingInvites(arr);
+      // Update cache
+      const map = useAppStore.getState().cachedHousePendingInvitesMap;
+      setCachedHousePendingInvitesMap({ ...map, [activeHouse.id]: arr });
     } catch {
       setPendingInvites([]);
     }
-  }, [currentUser, activeHouse]);
+  }, [currentUser, activeHouse, setCachedHousePendingInvitesMap]);
+
+  // Initialize from cache, fetch only if no cache
+  useEffect(() => {
+    if (hasMemberCache && cachedMembers) {
+      setMembers(cachedMembers);
+      setIsLoadingMembers(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchMembers();
+    if (!hasMemberCache) fetchMembers(true);
     fetchFriends();
-    fetchPendingInvites();
-  }, [fetchMembers, fetchFriends, fetchPendingInvites]);
+    if (!hasInviteCache) fetchPendingInvites();
+  }, [fetchMembers, fetchFriends, fetchPendingInvites, hasMemberCache, hasInviteCache]);
 
   useEffect(() => {
     if (activeHouse) setHouseName(activeHouse.name);
@@ -98,9 +118,9 @@ export function HouseSettingsScreen() {
   useEffect(() => {
     if (!activeHouse) return;
     const handler = () => {
-      fetchMembers();
+      fetchMembers(false);
       fetchFriends();
-      fetchPendingInvites();
+      fetchPendingInvites(false);
     };
     window.addEventListener('kinnect:house-members-changed', handler);
     return () => window.removeEventListener('kinnect:house-members-changed', handler);
@@ -116,7 +136,7 @@ export function HouseSettingsScreen() {
       });
       if (res.ok) {
         showToast('Приглашение отправлено!');
-        fetchPendingInvites();
+        fetchPendingInvites(false);
         setShowAddMember(false);
       } else {
         const data = await res.json();
@@ -147,7 +167,7 @@ export function HouseSettingsScreen() {
       });
       if (res.ok) {
         showToast('Участник удалён');
-        fetchMembers();
+        fetchMembers(false);
       }
     } catch {
       showToast('Не удалось удалить участника');
@@ -314,13 +334,13 @@ export function HouseSettingsScreen() {
           <div className="flex items-center justify-between mb-2 px-1">
             <p className="ios-section-header">УЧАСТНИКИ ({members.length})</p>
             {isOwner && (
-              <button onClick={() => setShowAddMember(true)} className="text-[12px] font-semibold" 
+              <button onClick={() => setShowAddMember(true)} className="text-[12px] font-semibold" style={{ color: '#007AFF' }}>
                 Пригласить из друзей
               </button>
             )}
           </div>
           <div className="ios-card">
-            {isLoadingMembers ? (
+            {isLoadingMembers && !hasMemberCache ? (
               <div className="px-4 py-6">
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (

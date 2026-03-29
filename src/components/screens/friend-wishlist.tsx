@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Gift, ExternalLink, Info } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
@@ -49,6 +49,8 @@ const SWIPE_THRESHOLD = 60;
 
 export function FriendWishlistScreen() {
   const { darkMode, popScreen, currentUser, showToast } = useAppStore();
+  const cachedFriendWishlistMap = useAppStore((s) => s.cachedFriendWishlistMap);
+  const setCachedFriendWishlistMap = useAppStore((s) => s.setCachedFriendWishlistMap);
   const [items, setItems] = useState<WishItem[]>([]);
   const [friendName, setFriendName] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -58,16 +60,42 @@ export function FriendWishlistScreen() {
 
   const friendId = _friendWishlistUserId;
 
-  const fetchItems = useCallback(async () => {
+  // Restore from cache immediately
+  const cachedEntry = friendId ? cachedFriendWishlistMap[friendId] : undefined;
+  const hasCache = !!cachedEntry;
+
+  const fetchItems = useCallback(async (showSpinner = false) => {
     if (!friendId) return;
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     try {
       const res = await authFetch(`/api/wishlist/friends/${friendId}`);
-      if (res.ok) { const data = await res.json(); setItems(Array.isArray(data.items) ? data.items : []); setFriendName(data.displayName || ''); }
+      if (res.ok) {
+        const data = await res.json();
+        const newItems = Array.isArray(data.items) ? data.items : [];
+        const newName = data.displayName || '';
+        setItems(newItems);
+        setFriendName(newName);
+        // Update cache
+        const currentMap = useAppStore.getState().cachedFriendWishlistMap;
+        setCachedFriendWishlistMap({ ...currentMap, [friendId]: { items: newItems, displayName: newName } });
+      }
     } catch { showToast('Не удалось загрузить'); } finally { setLoading(false); }
-  }, [friendId, showToast]);
+  }, [friendId, showToast, setCachedFriendWishlistMap]);
 
-  useEffect(() => { fetchItems(); return () => { _friendWishlistUserId = null; }; }, [fetchItems]);
+  // Initialize from cache, fetch only if no cache
+  useEffect(() => {
+    if (hasCache && cachedEntry) {
+      setItems(cachedEntry.items as WishItem[]);
+      setFriendName(cachedEntry.displayName);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasCache) fetchItems(true);
+    return () => { _friendWishlistUserId = null; };
+  }, [fetchItems, hasCache]);
+
   useEffect(() => {
     if (items.length === 0) setCurrentIndex(0);
     else if (currentIndex >= items.length) setCurrentIndex(items.length - 1);
@@ -84,7 +112,10 @@ export function FriendWishlistScreen() {
     setReserving(itemId);
     try {
       const res = await authFetch(`/api/wishlist/items/${itemId}`, { method: 'PATCH', body: JSON.stringify({ userId: currentUser.id, action }) });
-      if (res.ok) { showToast(action === 'reserve' ? 'Зарезервировано!' : 'Резерв отменён'); fetchItems(); }
+      if (res.ok) {
+        showToast(action === 'reserve' ? 'Зарезервировано!' : 'Резерв отменён');
+        fetchItems(false);
+      }
     } catch { showToast('Ошибка'); } finally { setReserving(null); }
   };
 
@@ -98,7 +129,7 @@ export function FriendWishlistScreen() {
         <div className="w-[60px]" />
       </div>
 
-      {loading ? (
+      {loading && !hasCache ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} />
         </div>
