@@ -57,7 +57,7 @@ function formatPrice(raw: string | null): string | null {
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 470;
+const CARD_HEIGHT = 490;
 const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════

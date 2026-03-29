@@ -82,9 +82,8 @@ export function CreateTaskScreen() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--ios-bg)' }}>
       <div className="flex items-center justify-between px-4 py-3" style={{ paddingTop: 'max(16px, calc(env(safe-area-inset-top, 16px) + 8px))' }}>
-        <button onClick={popScreen} className="flex items-center gap-1 min-w-[60px]">
-          <ChevronLeft size={22} color="#007AFF" />
-          <span className="text-[15px]" style={{ color: '#007AFF' }}>Назад</span>
+        <button onClick={popScreen} className="flex items-center justify-center w-[44px] h-[44px] -ml-1 active:opacity-50 transition-opacity">
+          <ChevronLeft size={24} color="#007AFF" />
         </button>
         <span className="ios-nav-title">Новая задача</span>
         <div className="w-[60px]" />
@@ -137,7 +136,7 @@ export function CreateTaskScreen() {
             </span>
             <button onClick={() => setShowAssignPicker(true)} className="flex items-center gap-1 px-3 py-[6px] rounded-full" style={{ background: 'var(--ios-blue-bg)' }}>
               <Users size={14} color="#007AFF" strokeWidth={2} />
-              <span className="text-[13px] font-medium" style={{ color: '#007AFF' }}>Выбрать</span>
+              <span className="text-[13px] font-medium" Выбрать</span>
             </button>
           </div>
           {assignedMembers.length > 0 && (

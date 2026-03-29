@@ -91,9 +91,8 @@ export function FriendWishlistScreen() {
   return (
     <div className="flex flex-col" style={{ background: 'var(--ios-bg)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between px-4 py-3" style={{ paddingTop: 'max(16px, calc(env(safe-area-inset-top, 16px) + 8px))' }}>
-        <button onClick={popScreen} className="flex items-center gap-1 min-w-[60px]">
-          <ChevronLeft size={22} color="#007AFF" />
-          <span className="text-[15px]" style={{ color: '#007AFF' }}>Назад</span>
+        <button onClick={popScreen} className="flex items-center justify-center w-[44px] h-[44px] -ml-1 active:opacity-50 transition-opacity">
+          <ChevronLeft size={24} color="#007AFF" />
         </button>
         <span className="ios-nav-title" style={{ color: 'var(--ios-text-primary)' }}>{friendName}</span>
         <div className="w-[60px]" />
