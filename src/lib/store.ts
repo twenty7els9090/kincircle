@@ -1,6 +1,64 @@
 import { create } from 'zustand';
 import type { Screen, TaskCategory, User, House, Task } from './types';
 
+// ─── Cached wishlist type ───
+export interface CachedWishItem {
+  id: string;
+  wishListId: string;
+  title: string;
+  photoUrl: string | null;
+  price: string | null;
+  link: string | null;
+  comment: string | null;
+  visibleTo: string | null;
+  reservedBy: string | null;
+  reservedByAvatar: string | null;
+  createdAt: string;
+}
+
+export interface CachedWishList {
+  id: string;
+  userId: string;
+  isPublic: boolean;
+  createdAt: string;
+  items: CachedWishItem[];
+}
+
+// ─── Cached friends type ───
+export interface CachedFriend {
+  id: string;
+  username: string | null;
+  displayName: string;
+  avatarUrl: string | null;
+  friendCode: string;
+  friendshipId: string;
+}
+
+export interface CachedIncomingReq {
+  id: string;
+  user: User;
+}
+
+export interface CachedSentReq {
+  id: string;
+  user: User;
+}
+
+export interface CachedHouse {
+  id: string;
+  name: string;
+  ownerId: string;
+  createdAt: string;
+  memberRole: string;
+  memberCount: number;
+}
+
+export interface CachedGroupInvite {
+  id: string;
+  house: { id: string; name: string; ownerId: string };
+  inviter: { id: string; displayName: string; username: string | null };
+}
+
 interface AppState {
   // Auth
   currentUser: User | null;
@@ -19,11 +77,29 @@ interface AppState {
   activeHouse: House | null;
   setActiveHouse: (house: House | null) => void;
 
-  // Tasks
+  // Tasks (already cached)
   activeCategory: TaskCategory;
   setActiveCategory: (cat: TaskCategory) => void;
   tasks: Task[];
   setTasks: (tasks: Task[]) => void;
+  tasksLoadedHouseId: string | null;
+  setTasksLoadedHouseId: (id: string | null) => void;
+
+  // Wishlist cache
+  wishList: CachedWishList | null;
+  setWishList: (wl: CachedWishList | null) => void;
+
+  // Profile cache
+  cachedFriends: CachedFriend[];
+  setCachedFriends: (f: CachedFriend[]) => void;
+  cachedIncoming: CachedIncomingReq[];
+  setCachedIncoming: (r: CachedIncomingReq[]) => void;
+  cachedSent: CachedSentReq[];
+  setCachedSent: (r: CachedSentReq[]) => void;
+  cachedHouses: CachedHouse[];
+  setCachedHouses: (h: CachedHouse[]) => void;
+  cachedGroupInvites: CachedGroupInvite[];
+  setCachedGroupInvites: (inv: CachedGroupInvite[]) => void;
 
   // Theme
   darkMode: boolean;
@@ -67,6 +143,24 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveCategory: (cat) => set({ activeCategory: cat }),
   tasks: [] as Task[],
   setTasks: (tasks) => set({ tasks: Array.isArray(tasks) ? tasks : [] }),
+  tasksLoadedHouseId: null,
+  setTasksLoadedHouseId: (id) => set({ tasksLoadedHouseId: id }),
+
+  // Wishlist
+  wishList: null,
+  setWishList: (wl) => set({ wishList: wl }),
+
+  // Profile
+  cachedFriends: [],
+  setCachedFriends: (f) => set({ cachedFriends: f }),
+  cachedIncoming: [],
+  setCachedIncoming: (r) => set({ cachedIncoming: r }),
+  cachedSent: [],
+  setCachedSent: (r) => set({ cachedSent: r }),
+  cachedHouses: [],
+  setCachedHouses: (h) => set({ cachedHouses: h }),
+  cachedGroupInvites: [],
+  setCachedGroupInvites: (inv) => set({ cachedGroupInvites: inv }),
 
   // Theme
   darkMode: false,

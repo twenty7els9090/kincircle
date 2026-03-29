@@ -7,43 +7,20 @@ import {
   ChevronRight, Users, Lock, Heart,
 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
+import type { CachedWishList } from '@/lib/store';
 import { AddWishSheet } from '@/components/shared/add-wish-sheet';
 import { setFriendWishlistUserId } from '@/components/screens/friend-wishlist';
 
-/* ─── Types ─── */
-
-interface WishItem {
-  id: string;
-  wishListId: string;
-  title: string;
-  photoUrl: string | null;
-  price: string | null;
-  link: string | null;
-  comment: string | null;
-  visibleTo: string | null;
-  reservedBy: string | null; // now returns displayName or null
-  reservedByAvatar: string | null;
-  createdAt: string;
-}
-
-interface WishList {
-  id: string;
-  userId: string;
-  isPublic: boolean;
-  createdAt: string;
-  items: WishItem[];
-}
+/* ─── Helpers ─── */
 
 interface FriendsWishList {
   id: string;
   userId: string;
   isPublic: boolean;
   createdAt: string;
-  items: WishItem[];
+  items: CachedWishList['items'];
   user: { id: string; displayName: string; avatarUrl: string | null };
 }
-
-/* ─── Helpers ─── */
 
 function formatPrice(raw: string | null): string | null {
   if (!raw) return null;
@@ -90,9 +67,8 @@ export function WishlistScreen() {
    ═══════════════════════════════════════════════════════ */
 
 function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
-  const { currentUser, darkMode, showToast } = useAppStore();
-  const [wishList, setWishList] = useState<WishList | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { currentUser, darkMode, showToast, wishList: cachedWishList, setWishList: storeSetWishList } = useAppStore();
+  const [loading, setLoading] = useState(false);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<'left' | 'right'>('left');
@@ -102,24 +78,27 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
     setLoading(true);
     try {
       const res = await authFetch(`/api/wishlist?userId=${currentUser.id}`);
-      if (res.ok) { const data = await res.json(); setWishList(data.wishList || null); }
+      if (res.ok) { const data = await res.json(); storeSetWishList(data.wishList || null); }
     } catch { /* silent */ } finally { setLoading(false); }
-  }, [currentUser]);
+  }, [currentUser, storeSetWishList]);
 
-  useEffect(() => { fetchWishlist(); }, [fetchWishlist]);
+  // Only fetch on mount if cache is empty
+  useEffect(() => {
+    if (!cachedWishList) fetchWishlist();
+  }, [cachedWishList, fetchWishlist]);
   useEffect(() => {
     const h = () => fetchWishlist();
     window.addEventListener('kinnect:wishlist-changed', h);
     return () => window.removeEventListener('kinnect:wishlist-changed', h);
   }, [fetchWishlist]);
   useEffect(() => {
-    if (!wishList) return;
-    if (wishList.items.length === 0) setCurrentIndex(0);
-    else if (currentIndex >= wishList.items.length) setCurrentIndex(wishList.items.length - 1);
-  }, [wishList?.items.length, currentIndex]);
+    if (!cachedWishList) return;
+    if (cachedWishList.items.length === 0) setCurrentIndex(0);
+    else if (currentIndex >= cachedWishList.items.length) setCurrentIndex(cachedWishList.items.length - 1);
+  }, [cachedWishList?.items.length, currentIndex]);
 
   const goToIndex = (i: number) => {
-    if (i < 0 || i >= (wishList?.items.length || 0) || i === currentIndex) return;
+    if (i < 0 || i >= (cachedWishList?.items.length || 0) || i === currentIndex) return;
     setDirection(i > currentIndex ? 'left' : 'right');
     setCurrentIndex(i);
   };
@@ -134,16 +113,16 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
   };
 
   const handleDeleteItem = (itemId: string) => {
-    if (!wishList) return;
-    const snapshot = wishList.items;
-    setWishList({ ...wishList, items: snapshot.filter((i) => i.id !== itemId) });
+    if (!cachedWishList) return;
+    const snapshot = cachedWishList.items;
+    storeSetWishList({ ...cachedWishList, items: snapshot.filter((i) => i.id !== itemId) });
     showToast('Удалено');
     authFetch(`/api/wishlist/items/${itemId}`, { method: 'DELETE' })
-      .then((r) => { if (!r.ok) { setWishList({ ...wishList, items: snapshot }); showToast('Не удалось удалить'); } })
-      .catch(() => { setWishList({ ...wishList, items: snapshot }); showToast('Ошибка'); });
+      .then((r) => { if (!r.ok) { storeSetWishList({ ...cachedWishList, items: snapshot }); showToast('Не удалось удалить'); } })
+      .catch(() => { storeSetWishList({ ...cachedWishList, items: snapshot }); showToast('Ошибка'); });
   };
 
-  const items = wishList?.items || [];
+  const items = cachedWishList?.items || [];
   const hasItems = items.length > 0;
 
   if (loading) return <div className="flex items-center justify-center py-20"><div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} /></div>;
@@ -234,7 +213,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
    ═══════════════════════════════════════════════════════ */
 
 function OwnCardStack({ items, currentIndex, onIndexChange, onDelete, dark, direction }: {
-  items: WishItem[]; currentIndex: number; onIndexChange: (i: number) => void; onDelete: (id: string) => void; dark?: boolean; direction: 'left' | 'right';
+  items: CachedWishList['items']; currentIndex: number; onIndexChange: (i: number) => void; onDelete: (id: string) => void; dark?: boolean; direction: 'left' | 'right';
 }) {
   const [showDelete, setShowDelete] = useState(false);
 

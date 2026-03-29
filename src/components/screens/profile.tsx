@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Home, UserPlus, Moon, Sun, LogOut, Search, Trash2, Copy, Check, X, Plus, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
+import type { CachedFriend, CachedHouse, CachedGroupInvite } from '@/lib/store';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
 import type { House, User } from '@/lib/types';
@@ -19,17 +20,13 @@ function pluralMembers(n: number) {
 }
 
 export function ProfileScreen() {
-  const { currentUser, darkMode, toggleDarkMode, setCurrentUser, setAuthToken, setScreen, showToast } = useAppStore();
-  const [houses, setHouses] = useState<(House & { memberRole: string; memberCount: number })[]>([]);
-  const [friends, setFriends] = useState<(User & { friendshipId: string })[]>([]);
-  const [incoming, setIncoming] = useState<{ id: string; user: User }[]>([]);
-  const [sent, setSent] = useState<{ id: string; user: User }[]>([]);
-  const [groupInvites, setGroupInvites] = useState<{
-    id: string;
-    house: { id: string; name: string; ownerId: string };
-    inviter: { id: string; displayName: string; username: string | null };
-  }[]>([]);
-
+  const { currentUser, darkMode, toggleDarkMode, setCurrentUser, setAuthToken, setScreen, showToast,
+    cachedFriends: friends, setCachedFriends,
+    cachedIncoming: incoming, setCachedIncoming,
+    cachedSent: sent, setCachedSent,
+    cachedHouses: houses, setCachedHouses,
+    cachedGroupInvites: groupInvites, setCachedGroupInvites,
+  } = useAppStore();
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<(User & { friendshipStatus: string | null; friendshipId: string | null })[]>([]);
@@ -39,6 +36,7 @@ export function ProfileScreen() {
   const [showCreateHouse, setShowCreateHouse] = useState(false);
   const [newHouseName, setNewHouseName] = useState('');
   const [creatingHouse, setCreatingHouse] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const userId = currentUser?.id;
 
@@ -56,28 +54,30 @@ export function ProfileScreen() {
       const { friends: f, incoming: reqs, sent: sentReqs } = await friendsRes.json();
       const { invites } = await invitesRes.json();
       if (signal?.aborted) return;
-      setHouses(Array.isArray(h) ? h : []);
-      setFriends(Array.isArray(f) ? f : []);
-      setIncoming(Array.isArray(reqs) ? reqs : []);
-      setSent(Array.isArray(sentReqs) ? sentReqs : []);
-      setGroupInvites(Array.isArray(invites) ? invites : []);
+      setCachedHouses(Array.isArray(h) ? h : []);
+      setCachedFriends(Array.isArray(f) ? f : []);
+      setCachedIncoming(Array.isArray(reqs) ? reqs : []);
+      setCachedSent(Array.isArray(sentReqs) ? sentReqs : []);
+      setCachedGroupInvites(Array.isArray(invites) ? invites : []);
+      setProfileLoaded(true);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
     }
-  }, [userId]);
+  }, [userId, setCachedHouses, setCachedFriends, setCachedIncoming, setCachedSent, setCachedGroupInvites]);
 
+  // Only fetch if not already cached
   useEffect(() => {
-    fetchProfileData();
-  }, [fetchProfileData]);
+    if (!profileLoaded && userId) fetchProfileData();
+  }, [profileLoaded, userId, fetchProfileData]);
 
   // Listen for realtime friend updates
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail) {
-        if (detail.friends) setFriends(detail.friends);
-        if (detail.incoming) setIncoming(detail.incoming);
-        if (detail.sent) setSent(detail.sent);
+        if (detail.friends) setCachedFriends(detail.friends);
+        if (detail.incoming) setCachedIncoming(detail.incoming);
+        if (detail.sent) setCachedSent(detail.sent);
       }
     };
     window.addEventListener('kinnect:friends-updated', handler);
@@ -89,7 +89,7 @@ export function ProfileScreen() {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.invites) {
-        setGroupInvites(detail.invites);
+        setCachedGroupInvites(detail.invites);
         // Refresh houses in case invite was accepted elsewhere
         fetchProfileData();
       }
@@ -165,8 +165,8 @@ export function ProfileScreen() {
         showToast('Друг добавлен!');
         const incomingReq = incoming.find((r) => r.id === friendshipId);
         if (incomingReq) {
-          setFriends((prev) => [...prev, { ...incomingReq.user, friendshipId }]);
-          setIncoming((prev) => prev.filter((r) => r.id !== friendshipId));
+          setCachedFriends((prev) => [...prev, { ...incomingReq.user, friendshipId }]);
+          setCachedIncoming((prev) => prev.filter((r) => r.id !== friendshipId));
         }
       }
     } catch {
@@ -179,7 +179,7 @@ export function ProfileScreen() {
       await authFetch(`/api/friends/${friendshipId}`, {
         method: 'DELETE',
       });
-      setIncoming((prev) => prev.filter((r) => r.id !== friendshipId));
+      setCachedIncoming((prev) => prev.filter((r) => r.id !== friendshipId));
       showToast('Заявка отклонена');
     } catch {
       showToast('Не удалось отклонить');
@@ -195,7 +195,7 @@ export function ProfileScreen() {
       });
 
       if (delRes.ok) {
-        setFriends((prev) => prev.filter((f) => f.id !== friend.id));
+        setCachedFriends((prev) => prev.filter((f) => f.id !== friend.id));
         showToast(`${friend.displayName || 'Друг'} удалён`);
       } else {
         showToast('Не удалось удалить');
@@ -216,7 +216,7 @@ export function ProfileScreen() {
       });
       if (res.ok) {
         const { house } = await res.json();
-        setHouses((prev) => [...prev, { ...house, memberRole: 'owner', memberCount: 1 }]);
+        setCachedHouses((prev) => [...prev, { ...house, memberRole: 'owner', memberCount: 1 }]);
         setNewHouseName('');
         setShowCreateHouse(false);
         showToast('Группа создана!');
@@ -459,7 +459,7 @@ export function ProfileScreen() {
                   <button
                     onClick={() => {
                       authFetch(`/api/group-invites/${invite.id}`, { method: 'DELETE' })
-                        .then(() => setGroupInvites((prev) => prev.filter((g) => g.id !== invite.id)))
+                        .then(() => setCachedGroupInvites((prev) => prev.filter((g) => g.id !== invite.id)))
                         .catch(() => {});
                     }}
                     className="w-[32px] h-[32px] rounded-full flex items-center justify-center shrink-0"
@@ -473,7 +473,7 @@ export function ProfileScreen() {
                         .then((res) => {
                           if (res.ok) {
                             showToast('Вы вступили в группу!');
-                            setGroupInvites((prev) => prev.filter((g) => g.id !== invite.id));
+                            setCachedGroupInvites((prev) => prev.filter((g) => g.id !== invite.id));
                             fetchProfileData();
                           }
                         })

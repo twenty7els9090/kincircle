@@ -136,7 +136,7 @@ export function CreateTaskScreen() {
             </span>
             <button onClick={() => setShowAssignPicker(true)} className="flex items-center gap-1 px-3 py-[6px] rounded-full" style={{ background: 'var(--ios-blue-bg)' }}>
               <Users size={14} color="#007AFF" strokeWidth={2} />
-              <span className="text-[13px] font-medium" Выбрать</span>
+              <span className="text-[13px] font-medium" style={{ color: '#007AFF' }}>Выбрать</span>
             </button>
           </div>
           {assignedMembers.length > 0 && (

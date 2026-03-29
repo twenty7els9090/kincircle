@@ -21,7 +21,7 @@ const ROLE_LABELS: Record<string, string> = {
 export function TasksScreen() {
   const {
     currentUser, activeHouse, setActiveHouse, pushScreen,
-    activeCategory, setActiveCategory, tasks, setTasks, showToast, darkMode,
+    activeCategory, setActiveCategory, tasks, setTasks, tasksLoadedHouseId, setTasksLoadedHouseId, showToast, darkMode,
   } = useAppStore();
 
   const [houseSwitcherOpen, setHouseSwitcherOpen] = useState(false);
@@ -126,13 +126,16 @@ export function TasksScreen() {
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then(({ tasks: t }) => {
         setTasks(Array.isArray(t) ? t : []);
+        setTasksLoadedHouseId(houseId);
       })
       .catch(() => {});
-  }, [activeHouse?.id, setTasks]);
+  }, [activeHouse?.id, setTasks, setTasksLoadedHouseId]);
 
   useEffect(() => {
+    // Skip fetch if already loaded for this house
+    if (tasksLoadedHouseId === activeHouse?.id) return;
     fetchTasks();
-  }, [fetchTasks]);
+  }, [fetchTasks, tasksLoadedHouseId, activeHouse?.id]);
 
   const switchHouse = (house: House) => {
     setActiveHouse(house);

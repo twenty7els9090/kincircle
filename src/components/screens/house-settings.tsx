@@ -265,7 +265,7 @@ export function HouseSettingsScreen() {
               <div className="flex items-center justify-between">
                 <span className="text-[17px] font-semibold" style={{ color: 'var(--ios-text-primary)' }}>{activeHouse.name}</span>
                 {isOwner && (
-                  <button onClick={() => setEditingName(true)} className="text-[15px]" 
+                  <button onClick={() => setEditingName(true)} className="text-[15px]" style={{ color: '#007AFF' }}>
                     Изменить
                   </button>
                 )}
