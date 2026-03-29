@@ -1,15 +1,137 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore, authFetch } from '@/lib/store';
 
+interface TelegramWebApp {
+  ready: () => void;
+  expand: () => void;
+  initData: string;
+  initDataUnsafe: {
+    user?: {
+      id: number;
+      first_name: string;
+      last_name?: string;
+      username?: string;
+      photo_url?: string;
+    };
+    auth_date?: number;
+  };
+  themeParams: Record<string, string>;
+  colorScheme: 'light' | 'dark';
+  MainButton: {
+    text: string;
+    show: () => void;
+    hide: () => void;
+    onClick: (fn: () => void) => void;
+  };
+  BackButton: {
+    show: () => void;
+    hide: () => void;
+    onClick: (fn: () => void) => void;
+  };
+  HapticFeedback: {
+    impactOccurred: (style: string) => void;
+    notificationOccurred: (type: string) => void;
+    selectionChanged: () => void;
+  };
+}
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: TelegramWebApp;
+    };
+  }
+}
+
+function isTelegram(): boolean {
+  return typeof window !== 'undefined' && !!window.Telegram?.WebApp?.initData;
+}
+
+function initTelegram(): TelegramWebApp | null {
+  if (typeof window === 'undefined' || !window.Telegram?.WebApp) return null;
+
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  // Apply Telegram theme
+  const bg = tg.themeParams.bg_color || '#F2F2F7';
+  document.documentElement.style.setProperty('--ios-bg', bg);
+
+  if (tg.colorScheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  }
+
+  return tg;
+}
+
 export function SplashScreen() {
-  const { setCurrentUser, setAuthToken, setScreen, setActiveHouse, showToast } = useAppStore();
+  const { setCurrentUser, setAuthToken, setScreen, setActiveHouse, showToast, setDarkMode } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
+  const [isTg, setIsTg] = useState(false);
 
-  const handleLogin = async () => {
+  // Detect Telegram on mount
+  useEffect(() => {
+    const tg = initTelegram();
+    if (tg && tg.initData) {
+      setIsTg(true);
+      // Auto-login via Telegram
+      handleTelegramLogin(tg.initData);
+    }
+  }, []);
+
+  const finishLogin = async (user: any, token: string) => {
+    setCurrentUser(user);
+    setAuthToken(token);
+    localStorage.setItem('kinnect_user_id', user.id);
+
+    const housesRes = await authFetch('/api/houses');
+    if (housesRes.ok) {
+      const { houses } = await housesRes.json();
+      const safeHouses = Array.isArray(houses) ? houses : [];
+      if (safeHouses.length > 0) {
+        setActiveHouse(safeHouses[0]);
+      }
+    }
+
+    setScreen('tasks');
+    showToast(`Добро пожаловать, ${user.displayName}!`);
+
+    // Haptic feedback if in Telegram
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.HapticFeedback?.notificationOccurred?.('success');
+    }
+  };
+
+  const handleTelegramLogin = async (initData: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData }),
+      });
+
+      if (!res.ok) {
+        showToast('Ошибка авторизации через Telegram');
+        setLoading(false);
+        return;
+      }
+
+      const { user, token } = await res.json();
+      await finishLogin(user, token);
+    } catch {
+      showToast('Что-то пошло не так');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNameLogin = async () => {
     if (!name.trim()) {
       showToast('Введите ваше имя');
       return;
@@ -28,21 +150,7 @@ export function SplashScreen() {
       }
 
       const { user, token } = await res.json();
-      setCurrentUser(user);
-      setAuthToken(token);
-      localStorage.setItem('kinnect_user_id', user.id);
-
-      // Fetch houses
-      const housesRes = await authFetch(`/api/houses`);
-      if (housesRes.ok) {
-        const { houses } = await housesRes.json();
-        const safeHouses = Array.isArray(houses) ? houses : [];
-        if (safeHouses.length > 0) {
-          setActiveHouse(safeHouses[0]);
-        }
-      }
-      setScreen('tasks');
-      showToast(`Добро пожаловать, ${user.displayName}!`);
+      await finishLogin(user, token);
     } catch {
       showToast('Что-то пошло не так');
     } finally {
@@ -53,7 +161,7 @@ export function SplashScreen() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-between px-8 py-16 relative overflow-hidden"
-      style={{ background: '#F2F2F7' }}
+      style={{ background: 'var(--ios-bg, #F2F2F7)' }}
     >
       {/* Decorative blobs */}
       <div className="absolute top-[-80px] right-[-60px] w-[240px] h-[240px] rounded-full opacity-30"
@@ -106,36 +214,54 @@ export function SplashScreen() {
         </motion.div>
       </div>
 
-      {/* Login form */}
+      {/* Auth section */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
         className="w-full max-w-sm flex flex-col items-center gap-4 relative z-10"
       >
-        <input
-          type="text"
-          className="ios-input mb-2"
-          placeholder="Ваше имя"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-          autoFocus
-        />
-        <motion.button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full rounded-2xl text-[17px] font-semibold text-white h-[56px] flex items-center justify-center"
-          style={{
-            background: loading ? '#8E8E93' : 'linear-gradient(145deg, #007AFF 0%, #5856D6 100%)',
-            boxShadow: '0 4px 20px rgba(0,122,255,0.3), 0 1px 4px rgba(0,0,0,0.08)',
-            opacity: loading ? 0.7 : 1,
-          }}
-          whileTap={!loading ? { scale: 0.97 } : undefined}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        >
-          {loading ? 'Входим...' : 'Войти'}
-        </motion.button>
+        {isTg ? (
+          /* Telegram: auto-login, show spinner */
+          <div className="flex flex-col items-center gap-3 py-4">
+            <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }}
+            />
+            <p className="text-[15px]" style={{ color: '#AEAEB2' }}>
+              Входим через Telegram...
+            </p>
+          </div>
+        ) : (
+          /* Dev / browser: name login */
+          <>
+            <input
+              type="text"
+              className="ios-input mb-2"
+              placeholder="Ваше имя"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleNameLogin()}
+              autoFocus
+            />
+            <motion.button
+              onClick={handleNameLogin}
+              disabled={loading}
+              className="w-full rounded-2xl text-[17px] font-semibold text-white h-[56px] flex items-center justify-center"
+              style={{
+                background: loading ? '#8E8E93' : 'linear-gradient(145deg, #007AFF 0%, #5856D6 100%)',
+                boxShadow: '0 4px 20px rgba(0,122,255,0.3), 0 1px 4px rgba(0,0,0,0.08)',
+                opacity: loading ? 0.7 : 1,
+              }}
+              whileTap={!loading ? { scale: 0.97 } : undefined}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            >
+              {loading ? 'Входим...' : 'Войти'}
+            </motion.button>
+            <p className="text-[12px] mt-1" style={{ color: '#C7C7CC' }}>
+              Демо-режим (откройте в Telegram для авторизации)
+            </p>
+          </>
+        )}
       </motion.div>
     </div>
   );

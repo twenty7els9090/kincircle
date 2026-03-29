@@ -26,6 +26,8 @@ export default function RootLayout({
     <html lang="ru" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#F2F2F7" />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
       </head>
       <body
         className="antialiased"
