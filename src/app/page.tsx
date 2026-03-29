@@ -83,9 +83,17 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const themeInitialized = useRef(false);
 
-  // ─── Sync darkMode store → DOM (always runs when darkMode changes) ───
+  // ─── Sync darkMode store → DOM + Telegram header ───
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
+
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      const headerColor = darkMode ? '#1C1C1E' : '#FFFFFF';
+      const bgColor = darkMode ? '#1C1C1E' : '#F2F2F7';
+      tg.setHeaderColor(headerColor);
+      tg.setBackgroundColor(bgColor);
+    }
   }, [darkMode]);
 
   // ─── Detect Telegram theme ONCE on mount ───

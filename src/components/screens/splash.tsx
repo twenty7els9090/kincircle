@@ -16,6 +16,14 @@ export function SplashScreen() {
     if (tg?.initData) {
       tg.ready();
       tg.expand();
+      // Set header color immediately on splash
+      if (tg.colorScheme === 'dark') {
+        tg.setHeaderColor('#1C1C1E');
+        tg.setBackgroundColor('#1C1C1E');
+      } else {
+        tg.setHeaderColor('#FFFFFF');
+        tg.setBackgroundColor('#F2F2F7');
+      }
       setIsTg(true);
       handleTelegramLogin(tg.initData);
     }
