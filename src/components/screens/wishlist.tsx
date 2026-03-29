@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Gift, Trash2, ExternalLink,
-  ChevronRight, Info,
+  ChevronRight,
 } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
@@ -60,7 +60,7 @@ function formatPrice(raw: string | null): string | null {
 /* ─── Constants ─── */
 
 const PLACEHOLDER_COLORS = ['#FFE8D6', '#E3F2FF', '#E3F9E5', '#F3E8FF', '#FFF8E1'];
-const CARD_HEIGHT = 360;
+const CARD_HEIGHT = 480;
 const SWIPE_THRESHOLD = 60;
 
 /* ═══════════════════════════════════════════════════════
@@ -134,7 +134,6 @@ function MyWishlist() {
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Fetch wishlist
   const fetchWishlist = useCallback(async () => {
     if (!currentUser) return;
     setLoading(true);
@@ -144,39 +143,28 @@ function MyWishlist() {
         const data = await res.json();
         setWishList(data.wishList || null);
       }
-    } catch {
-      /* silent */
-    } finally {
+    } catch { /* silent */ } finally {
       setLoading(false);
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    fetchWishlist();
-  }, [fetchWishlist]);
+  useEffect(() => { fetchWishlist(); }, [fetchWishlist]);
 
-  // Realtime via CustomEvent from use-realtime.ts
   useEffect(() => {
     const handler = () => fetchWishlist();
     window.addEventListener('kinnect:wishlist-changed', handler);
     return () => window.removeEventListener('kinnect:wishlist-changed', handler);
   }, [fetchWishlist]);
 
-  // Clamp index
   useEffect(() => {
     if (!wishList) return;
     if (wishList.items.length === 0) setCurrentIndex(0);
     else if (currentIndex >= wishList.items.length) setCurrentIndex(wishList.items.length - 1);
   }, [wishList?.items.length, currentIndex]);
 
-  // Add item
   const handleAddItem = async (item: {
-    title: string;
-    photoUrl?: string;
-    price?: string;
-    link?: string;
-    comment?: string;
-    visibleTo?: string | null;
+    title: string; photoUrl?: string; price?: string;
+    link?: string; comment?: string; visibleTo?: string | null;
   }) => {
     if (!currentUser) return;
     setShowAddSheet(false);
@@ -185,47 +173,27 @@ function MyWishlist() {
         method: 'POST',
         body: JSON.stringify({ userId: currentUser.id, ...item }),
       });
-      if (res.ok) {
-        showToast('Желание добавлено!');
-        fetchWishlist();
-      } else {
-        showToast('Не удалось добавить');
-      }
-    } catch {
-      showToast('Ошибка');
-    }
+      if (res.ok) { showToast('Желание добавлено!'); fetchWishlist(); }
+      else showToast('Не удалось добавить');
+    } catch { showToast('Ошибка'); }
   };
 
-  // Delete item
   const handleDeleteItem = (itemId: string) => {
     if (!wishList) return;
     const snapshot = wishList.items;
     setWishList({ ...wishList, items: snapshot.filter((i) => i.id !== itemId) });
     showToast('Удалено');
-
     authFetch(`/api/wishlist/items/${itemId}`, { method: 'DELETE' })
-      .then((r) => {
-        if (!r.ok) {
-          setWishList({ ...wishList, items: snapshot });
-          showToast('Не удалось удалить');
-        }
-      })
-      .catch(() => {
-        setWishList({ ...wishList, items: snapshot });
-        showToast('Ошибка');
-      });
+      .then((r) => { if (!r.ok) { setWishList({ ...wishList, items: snapshot }); showToast('Не удалось удалить'); } })
+      .catch(() => { setWishList({ ...wishList, items: snapshot }); showToast('Ошибка'); });
   };
 
   const items = wishList?.items || [];
-  const currentItem = items[currentIndex];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div
-          className="w-[32px] h-[32px] rounded-full border-2 animate-spin"
-          style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }}
-        />
+        <div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} />
       </div>
     );
   }
@@ -233,28 +201,13 @@ function MyWishlist() {
   return (
     <div className="relative">
       {items.length === 0 ? (
-        /* ── Empty state ── */
         <div className="flex flex-col items-center justify-center px-8 py-16">
-          <div
-            className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-4"
-            style={{ background: darkMode ? '#2C2C2E' : '#F2F2F7' }}
-          >
+          <div className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-4" style={{ background: darkMode ? '#2C2C2E' : '#F2F2F7' }}>
             <Gift size={36} color="#8E8E93" strokeWidth={1.2} />
           </div>
-          <p
-            className="text-[17px] font-semibold mb-1"
-            style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
-          >
-            Список пуст
-          </p>
-          <p className="ios-meta text-center mb-6">
-            Добавьте желания, чтобы ваши друзья знали, что вам подарить
-          </p>
-          <button
-            onClick={() => setShowAddSheet(true)}
-            className="flex items-center gap-2 px-6 py-3 rounded-full"
-            style={{ background: '#007AFF' }}
-          >
+          <p className="text-[17px] font-semibold mb-1" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>Список пуст</p>
+          <p className="ios-meta text-center mb-6">Добавьте желания, чтобы ваши друзья знали, что вам подарить</p>
+          <button onClick={() => setShowAddSheet(true)} className="flex items-center gap-2 px-6 py-3 rounded-full" style={{ background: '#007AFF' }}>
             <Plus size={20} color="white" strokeWidth={2.5} />
             <span className="text-white text-[15px] font-semibold">Добавить желание</span>
           </button>
@@ -270,56 +223,30 @@ function MyWishlist() {
               onDelete={handleDeleteItem}
               dark={darkMode}
             />
-
             {/* Dots */}
-            <DotsIndicator
-              total={items.length}
-              current={currentIndex}
-              dark={darkMode}
-              onDotPress={setCurrentIndex}
-            />
+            <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={setCurrentIndex} />
           </div>
-
-          {/* ── Detail Card ── */}
-          {currentItem && (
-            <div className="px-4 mt-2 pb-24">
-              <OwnDetailCard item={currentItem} dark={darkMode} />
-            </div>
-          )}
         </>
       )}
 
-      {/* ── FAB ── */}
+      {/* FAB */}
       {items.length > 0 && (
-        <button
-          onClick={() => setShowAddSheet(true)}
-          className="fixed bottom-24 right-4 w-[56px] h-[56px] rounded-full flex items-center justify-center z-[60] shadow-lg active:scale-95 transition-transform"
-          style={{ background: '#007AFF' }}
-        >
+        <button onClick={() => setShowAddSheet(true)} className="fixed bottom-24 right-4 w-[56px] h-[56px] rounded-full flex items-center justify-center z-[60] shadow-lg active:scale-95 transition-transform" style={{ background: '#007AFF' }}>
           <Plus size={28} color="white" strokeWidth={2.5} />
         </button>
       )}
 
-      {/* ── Add Wish Sheet ── */}
-      <AddWishSheet
-        open={showAddSheet}
-        onClose={() => setShowAddSheet(false)}
-        onAdd={handleAddItem}
-      />
+      <AddWishSheet open={showAddSheet} onClose={() => setShowAddSheet(false)} onAdd={handleAddItem} />
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   Own Card Stack (swipe to navigate, long-press to delete)
+   Own Card Stack — all info on card, trash in corner
    ═══════════════════════════════════════════════════════ */
 
 function OwnCardStack({
-  items,
-  currentIndex,
-  onIndexChange,
-  onDelete,
-  dark,
+  items, currentIndex, onIndexChange, onDelete, dark,
 }: {
   items: WishItem[];
   currentIndex: number;
@@ -331,7 +258,6 @@ function OwnCardStack({
   const touchStartY = useRef(0);
   const [swipeDelta, setSwipeDelta] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentItem = items[currentIndex];
   if (!currentItem) return null;
@@ -342,67 +268,48 @@ function OwnCardStack({
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    longPressTimer.current = setTimeout(() => setShowDelete(true), 600);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
-    if (longPressTimer.current && dy > 10) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
     setSwipeDelta(dx);
   };
 
   const handleTouchEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    if (swipeDelta < -SWIPE_THRESHOLD && currentIndex < items.length - 1) {
-      onIndexChange(currentIndex + 1);
-    } else if (swipeDelta > SWIPE_THRESHOLD && currentIndex > 0) {
-      onIndexChange(currentIndex - 1);
-    }
+    if (swipeDelta < -SWIPE_THRESHOLD && currentIndex < items.length - 1) onIndexChange(currentIndex + 1);
+    else if (swipeDelta > SWIPE_THRESHOLD && currentIndex > 0) onIndexChange(currentIndex - 1);
     setSwipeDelta(0);
   };
 
+  const formattedPrice = formatPrice(currentItem.price);
+  const placeholderColor = PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length];
+
   return (
     <>
-      <div
-        className="relative w-full"
-        style={{ height: CARD_HEIGHT }}
-      >
+      <div className="relative w-full" style={{ height: CARD_HEIGHT }}>
         {/* Ghost card 2 */}
         {hasNext2 && (
-          <div
-            className="absolute rounded-[20px]"
-            style={{
-              top: 0, left: 0, right: 0, height: CARD_HEIGHT,
-              background: PLACEHOLDER_COLORS[(currentIndex + 2) % PLACEHOLDER_COLORS.length],
-              transform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
-              WebkitTransform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
-              opacity: 0.45,
-            }}
-          />
+          <div className="absolute rounded-[20px]" style={{
+            top: 0, left: 0, right: 0, height: CARD_HEIGHT,
+            background: PLACEHOLDER_COLORS[(currentIndex + 2) % PLACEHOLDER_COLORS.length],
+            transform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
+            WebkitTransform: 'rotate(5deg) translateX(-12px) translateY(12px) scale(0.9)',
+            opacity: 0.45,
+          }} />
         )}
 
         {/* Ghost card 1 */}
         {hasNext1 && (
-          <div
-            className="absolute rounded-[20px]"
-            style={{
-              top: 0, left: 0, right: 0, height: CARD_HEIGHT,
-              background: PLACEHOLDER_COLORS[(currentIndex + 1) % PLACEHOLDER_COLORS.length],
-              transform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
-              WebkitTransform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
-              opacity: 0.7,
-            }}
-          />
+          <div className="absolute rounded-[20px]" style={{
+            top: 0, left: 0, right: 0, height: CARD_HEIGHT,
+            background: PLACEHOLDER_COLORS[(currentIndex + 1) % PLACEHOLDER_COLORS.length],
+            transform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
+            WebkitTransform: 'rotate(2.5deg) translateX(-6px) translateY(6px) scale(0.95)',
+            opacity: 0.7,
+          }} />
         )}
 
-        {/* Top card */}
+        {/* ─── Top card ─── */}
         <motion.div
           className="absolute rounded-[24px] overflow-hidden"
           style={{
@@ -415,105 +322,120 @@ function OwnCardStack({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Full image or placeholder */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: PLACEHOLDER_COLORS[currentIndex % PLACEHOLDER_COLORS.length],
-            }}
-          >
-            {currentItem.photoUrl ? (
-              <img
-                src={currentItem.photoUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Gift size={48} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
-              </div>
-            )}
+          {/* ── Image area (top ~60%) ── */}
+          <div className="relative" style={{ height: '58%' }}>
+            <div className="absolute inset-0" style={{ background: placeholderColor }}>
+              {currentItem.photoUrl ? (
+                <img src={currentItem.photoUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Gift size={56} color="rgba(0,0,0,0.1)" strokeWidth={1.2} />
+                </div>
+              )}
+            </div>
+
+            {/* Gradient overlay */}
+            <div className="absolute inset-x-0 bottom-0" style={{
+              height: '60%',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)',
+            }} />
+
+            {/* Title + price on image */}
+            <div className="absolute inset-x-0 bottom-0 p-4 pb-3">
+              <p className="text-[19px] font-bold leading-tight text-white drop-shadow-sm">
+                {currentItem.title}
+              </p>
+              {formattedPrice && (
+                <p className="text-[14px] mt-1 font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                  {formattedPrice}
+                </p>
+              )}
+            </div>
+
+            {/* ── Trash button top-right ── */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowDelete(true); }}
+              className="absolute top-3 right-3 w-[36px] h-[36px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
+              style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+            >
+              <Trash2 size={18} color="white" strokeWidth={2} />
+            </button>
           </div>
 
-          {/* Gradient overlay — bottom */}
+          {/* ── Info area (bottom ~42%) ── */}
           <div
-            className="absolute inset-x-0 bottom-0"
+            className="p-4 pt-3 space-y-2.5"
             style={{
-              height: '55%',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+              background: dark ? '#1C1C1E' : '#ffffff',
+              height: '42%',
+              display: 'flex',
+              flexDirection: 'column',
             }}
-          />
+          >
+            {/* Link */}
+            {currentItem.link && (
+              <a
+                href={currentItem.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium shrink-0"
+                style={{ color: '#007AFF' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink size={13} strokeWidth={2} />
+                Открыть ссылку
+              </a>
+            )}
 
-          {/* Text on image */}
-          <div className="absolute inset-x-0 bottom-0 p-5">
-            <p className="text-[20px] font-bold leading-tight text-white drop-shadow-sm">
-              {currentItem.title}
-            </p>
-            {currentItem.price && (
-              <p className="text-[15px] mt-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                {formatPrice(currentItem.price)}
+            {/* Comment */}
+            {currentItem.comment && (
+              <div className="rounded-xl p-2.5 shrink-0" style={{ background: dark ? '#2C2C2E' : '#F2F2F7' }}>
+                <p className="text-[13px] leading-relaxed" style={{ color: '#8E8E93' }}>
+                  {currentItem.comment}
+                </p>
+              </div>
+            )}
+
+            {/* Visibility hint */}
+            {currentItem.visibleTo && (
+              <p className="text-[12px] shrink-0" style={{ color: '#FF9500' }}>
+                👁 Видно только одному человеку
               </p>
             )}
+
+            {/* Spacer */}
+            <div className="flex-1" />
           </div>
         </motion.div>
       </div>
 
-      {/* Delete confirmation */}
+      {/* ── Delete confirmation ── */}
       <AnimatePresence>
         {showDelete && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center px-8"
             style={{ background: 'rgba(0,0,0,0.4)' }}
             onClick={() => setShowDelete(false)}
           >
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
               className="w-full max-w-[300px] rounded-[14px] p-5 text-center"
-              style={{
-                background: dark ? '#2C2C2E' : '#ffffff',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              }}
+              style={{ background: dark ? '#2C2C2E' : '#ffffff', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div
-                className="w-[48px] h-[48px] rounded-full flex items-center justify-center mx-auto mb-3"
-                style={{ background: '#FFF0F0' }}
-              >
+              <div className="w-[48px] h-[48px] rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: '#FFF0F0' }}>
                 <Trash2 size={22} color="#FF3B30" strokeWidth={2} />
               </div>
-              <p
-                className="text-[17px] font-semibold mb-1"
-                style={{ color: dark ? '#F5F5F7' : '#1C1C1E' }}
-              >
-                Удалить желание?
-              </p>
+              <p className="text-[17px] font-semibold mb-1" style={{ color: dark ? '#F5F5F7' : '#1C1C1E' }}>Удалить желание?</p>
               <p className="text-[13px] mb-5" style={{ color: '#8E8E93' }}>
                 &laquo;{currentItem.title}&raquo; будет удалено безвозвратно
               </p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDelete(false)}
-                  className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold"
-                  style={{
-                    background: dark ? '#3A3A3C' : '#F2F2F7',
-                    color: dark ? '#F5F5F7' : '#1C1C1E',
-                  }}
-                >
+                <button onClick={() => setShowDelete(false)} className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold" style={{ background: dark ? '#3A3A3C' : '#F2F2F7', color: dark ? '#F5F5F7' : '#1C1C1E' }}>
                   Отмена
                 </button>
-                <button
-                  onClick={() => {
-                    setShowDelete(false);
-                    onDelete(currentItem.id);
-                  }}
-                  className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold text-white"
-                  style={{ background: '#FF3B30' }}
-                >
+                <button onClick={() => { setShowDelete(false); onDelete(currentItem.id); }} className="flex-1 h-[44px] rounded-[12px] text-[15px] font-semibold text-white" style={{ background: '#FF3B30' }}>
                   Удалить
                 </button>
               </div>
@@ -526,73 +448,11 @@ function OwnCardStack({
 }
 
 /* ═══════════════════════════════════════════════════════
-   Own Detail Card
-   ═══════════════════════════════════════════════════════ */
-
-function OwnDetailCard({ item, dark }: { item: WishItem; dark?: boolean }) {
-  const cardBg = dark ? '#1C1C1E' : '#ffffff';
-  const textColor = dark ? '#F5F5F7' : '#1C1C1E';
-  const metaColor = '#8E8E93';
-  const subtleBg = dark ? '#2C2C2E' : '#F2F2F7';
-
-  const formattedPrice = formatPrice(item.price);
-
-  return (
-    <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: cardBg,
-        border: dark ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.08)',
-      }}
-    >
-      <p className="text-[17px] font-semibold leading-snug" style={{ color: textColor }}>
-        {item.title}
-      </p>
-
-      {formattedPrice && (
-        <p className="text-[15px]" style={{ color: metaColor }}>{formattedPrice}</p>
-      )}
-
-      {item.link && (
-        <a
-          href={item.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[13px] font-medium"
-          style={{ color: '#007AFF' }}
-        >
-          <ExternalLink size={13} strokeWidth={2} />
-          Открыть ссылку
-        </a>
-      )}
-
-      {item.comment && (
-        <div className="rounded-xl p-3" style={{ background: subtleBg }}>
-          <p className="text-[14px] leading-relaxed" style={{ color: metaColor }}>
-            {item.comment}
-          </p>
-        </div>
-      )}
-
-      <div
-        className="flex items-start gap-2.5 rounded-xl p-3"
-        style={{ background: subtleBg }}
-      >
-        <Info size={16} color="#8E8E93" className="shrink-0 mt-0.5" />
-        <p className="text-[13px] leading-relaxed" style={{ color: '#8E8E93' }}>
-          Нажмите и удерживайте карточку, чтобы удалить
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
    Friends Wishlists Tab
    ═══════════════════════════════════════════════════════ */
 
 function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => void }) {
-  const { currentUser, darkMode, activeHouse, showToast } = useAppStore();
+  const { currentUser, darkMode, activeHouse } = useAppStore();
   const [friendsLists, setFriendsLists] = useState<FriendsWishList[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -602,59 +462,31 @@ function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => vo
     try {
       const params = new URLSearchParams({ userId: currentUser.id });
       if (activeHouse) params.set('houseId', activeHouse.id);
-
       const res = await authFetch(`/api/wishlist/friends?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setFriendsLists(Array.isArray(data.friendsLists) ? data.friendsLists : []);
       }
-    } catch {
-      /* silent */
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* silent */ } finally { setLoading(false); }
   }, [currentUser, activeHouse]);
 
-  useEffect(() => {
-    fetchFriendsLists();
-  }, [fetchFriendsLists]);
-
-  // Realtime via CustomEvent from use-realtime.ts
+  useEffect(() => { fetchFriendsLists(); }, [fetchFriendsLists]);
   useEffect(() => {
     const handler = () => fetchFriendsLists();
     window.addEventListener('kinnect:wishlist-changed', handler);
     return () => window.removeEventListener('kinnect:wishlist-changed', handler);
   }, [fetchFriendsLists]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div
-          className="w-[32px] h-[32px] rounded-full border-2 animate-spin"
-          style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }}
-        />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-[32px] h-[32px] rounded-full border-2 animate-spin" style={{ borderColor: '#007AFF', borderTopColor: 'transparent' }} /></div>;
 
   if (friendsLists.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-8 py-16">
-        <div
-          className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-4"
-          style={{ background: darkMode ? '#2C2C2E' : '#F2F2F7' }}
-        >
+        <div className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-4" style={{ background: darkMode ? '#2C2C2E' : '#F2F2F7' }}>
           <Gift size={36} color="#8E8E93" strokeWidth={1.2} />
         </div>
-        <p
-          className="text-[17px] font-semibold mb-1"
-          style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
-        >
-          Пока пусто
-        </p>
-        <p className="ios-meta text-center">
-          Когда ваши друзья откроют свои вишлисты, они появятся здесь
-        </p>
+        <p className="text-[17px] font-semibold mb-1" style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}>Пока пусто</p>
+        <p className="ios-meta text-center">Когда ваши друзья откроют свои вишлисты, они появятся здесь</p>
       </div>
     );
   }
@@ -662,82 +494,38 @@ function FriendsWishlists({ onFriendPress }: { onFriendPress: (id: string) => vo
   return (
     <div className="px-4 pb-20 space-y-4">
       {friendsLists.map((fl) => (
-        <FriendMiniStack
-          key={fl.id}
-          wishList={fl}
-          dark={darkMode}
-          onPress={() => onFriendPress(fl.userId)}
-        />
+        <FriendMiniStack key={fl.id} wishList={fl} dark={darkMode} onPress={() => onFriendPress(fl.userId)} />
       ))}
     </div>
   );
 }
 
-/* ─── Friend Mini Stack (preview card) ─── */
+/* ─── Friend Mini Stack ─── */
 
-function FriendMiniStack({
-  wishList,
-  dark,
-  onPress,
-}: {
-  wishList: FriendsWishList;
-  dark?: boolean;
-  onPress: () => void;
-}) {
+function FriendMiniStack({ wishList, dark, onPress }: { wishList: FriendsWishList; dark?: boolean; onPress: () => void }) {
   const cardBg = dark ? '#1C1C1E' : '#ffffff';
   const textColor = dark ? '#F5F5F7' : '#1C1C1E';
-  const subtitleColor = '#8E8E93';
-
   const items = wishList.items || [];
   const topItem = items[0];
   const totalItems = items.length;
-  const reservedCount = items.filter(
-    (i) => i.reservedBy === '__someone_else__' || i.reservedBy
-  ).length;
+  const reservedCount = items.filter((i) => i.reservedBy === '__someone_else__' || i.reservedBy).length;
   const freeCount = totalItems - reservedCount;
 
   return (
     <button
       onClick={onPress}
       className="w-full text-left rounded-2xl overflow-hidden transition-shadow active:scale-[0.98] active:opacity-80"
-      style={{
-        background: cardBg,
-        border: dark ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.06)',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-      }}
+      style={{ background: cardBg, border: dark ? '0.5px solid rgba(255,255,255,0.08)' : '0.5px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
     >
-      {/* Mini card preview area */}
-      <div
-        className="relative"
-        style={{
-          height: 100,
-          background: topItem
-            ? PLACEHOLDER_COLORS[0]
-            : (dark ? '#2C2C2E' : '#F2F2F7'),
-        }}
-      >
-        {topItem?.photoUrl ? (
-          <img src={topItem.photoUrl} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <Gift size={28} color="rgba(0,0,0,0.12)" />
-          </div>
-        )}
+      <div className="relative" style={{ height: 100, background: topItem ? PLACEHOLDER_COLORS[0] : (dark ? '#2C2C2E' : '#F2F2F7') }}>
+        {topItem?.photoUrl ? <img src={topItem.photoUrl} alt="" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full"><Gift size={28} color="rgba(0,0,0,0.12)" /></div>}
       </div>
-
-      {/* Info */}
       <div className="p-3.5 flex items-center justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold truncate" style={{ color: textColor }}>
-            {wishList.user.displayName}
-          </p>
-          <p className="text-[13px] mt-[2px]" style={{ color: subtitleColor }}>
+          <p className="text-[15px] font-semibold truncate" style={{ color: textColor }}>{wishList.user.displayName}</p>
+          <p className="text-[13px] mt-[2px]" style={{ color: '#8E8E93' }}>
             {totalItems} {totalItems === 1 ? 'желание' : totalItems < 5 ? 'желания' : 'желаний'}
-            {freeCount > 0 && (
-              <span style={{ color: '#34C759' }}>
-                {' '}· {freeCount} {freeCount === 1 ? 'свободно' : 'свободных'}
-              </span>
-            )}
+            {freeCount > 0 && <span style={{ color: '#34C759' }}>{' '}· {freeCount} {freeCount === 1 ? 'свободно' : 'свободных'}</span>}
           </p>
         </div>
         <ChevronRight size={18} color="#C7C7CC" className="shrink-0 ml-2" />
@@ -750,32 +538,12 @@ function FriendMiniStack({
    Dots Indicator
    ═══════════════════════════════════════════════════════ */
 
-function DotsIndicator({
-  total,
-  current,
-  dark,
-  onDotPress,
-}: {
-  total: number;
-  current: number;
-  dark?: boolean;
-  onDotPress?: (i: number) => void;
-}) {
+function DotsIndicator({ total, current, dark, onDotPress }: { total: number; current: number; dark?: boolean; onDotPress?: (i: number) => void }) {
   if (total <= 1) return null;
-
   return (
     <div className="flex items-center justify-center gap-[6px] py-4">
       {Array.from({ length: total }).map((_, i) => (
-        <button
-          key={i}
-          onClick={() => onDotPress?.(i)}
-          className="rounded-full transition-colors duration-200"
-          style={{
-            width: 5,
-            height: 5,
-            background: i === current ? '#007AFF' : dark ? '#636366' : '#C7C7CC',
-          }}
-        />
+        <button key={i} onClick={() => onDotPress?.(i)} className="rounded-full transition-colors duration-200" style={{ width: 5, height: 5, background: i === current ? '#007AFF' : dark ? '#636366' : '#C7C7CC' }} />
       ))}
     </div>
   );
