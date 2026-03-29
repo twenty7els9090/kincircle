@@ -34,36 +34,21 @@ export function TasksScreen() {
     return h?.memberCount || 0;
   }, [houses, activeHouse]);
 
-  // Fetch houses — auto-create if none exist
+  // Fetch houses silently — no auto-create
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
-    const init = async () => {
-      const r = await authFetch(`/api/houses`);
-      if (cancelled || !r.ok) return;
-      const { houses: h } = await r.json();
-      const safe = Array.isArray(h) ? h : [];
-      setHouses(safe);
-
-      if (safe.length > 0) {
-        if (!useAppStore.getState().activeHouse) {
+    authFetch(`/api/houses`)
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(({ houses: h }) => {
+        if (cancelled) return;
+        const safe = Array.isArray(h) ? h : [];
+        setHouses(safe);
+        if (safe.length > 0 && !useAppStore.getState().activeHouse) {
           useAppStore.getState().setActiveHouse(safe[0]);
         }
-      } else {
-        // No house — auto-create one so user can create tasks
-        const cr = await authFetch('/api/houses', {
-          method: 'POST',
-          body: JSON.stringify({ name: 'Мои задачи' }),
-        });
-        if (cr.ok && !cancelled) {
-          const { house } = await cr.json();
-          setHouses([house]);
-          useAppStore.getState().setActiveHouse(house);
-        }
-      }
-      setIsLoading(false);
-    };
-    init().catch(() => { if (!cancelled) setIsLoading(false); });
+      })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [currentUser]);
 
@@ -138,17 +123,23 @@ export function TasksScreen() {
       {/* Header */}
       <div className="shrink-0 px-4 pt-[60px] pb-2">
         <div className="flex items-center justify-between">
-          <button onClick={() => setHouseSwitcherOpen(true)} className="flex items-center gap-2">
+          {activeHouse ? (
+            <button onClick={() => setHouseSwitcherOpen(true)} className="flex items-center gap-2">
+              <div>
+                <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>
+                  {activeHouse.name}
+                </h1>
+                <p className="ios-meta">
+                  {memberCount} {memberCount === 1 ? 'участник' : memberCount < 5 ? 'участника' : 'участников'}
+                </p>
+              </div>
+              {houses.length >= 1 && <ChevronDown size={18} color="#8E8E93" className="ml-1 mt-[-16px]" />}
+            </button>
+          ) : (
             <div>
-              <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>
-                {activeHouse?.name || 'Выберите дом'}
-              </h1>
-              <p className="ios-meta">
-                {memberCount} {memberCount === 1 ? 'участник' : memberCount < 5 ? 'участника' : 'участников'}
-              </p>
+              <h1 className="ios-large-title" style={{ color: 'var(--ios-text-primary)' }}>Задачи</h1>
             </div>
-            {houses.length >= 1 && <ChevronDown size={18} color="#8E8E93" className="ml-1 mt-[-16px]" />}
-          </button>
+          )}
           <button
             onClick={() => pushScreen('create-task')}
             className="flex items-center gap-1 px-3 py-2 rounded-full"
