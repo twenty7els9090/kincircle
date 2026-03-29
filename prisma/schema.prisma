@@ -15,7 +15,6 @@ model User {
   avatarUrl   String?
   friendCode  String   @unique @default("")
   createdAt   DateTime @default(now()) @map("createdAt")
-  updatedAt   DateTime? @updatedAt @map("updatedAt")
 
   friendshipsInitiated  Friendship[]  @relation("FriendshipInitiator")
   friendshipsReceived   Friendship[]  @relation("FriendshipRecipient")
@@ -91,7 +90,6 @@ model Task {
   isDone      Boolean  @default(false)
   completedBy String?
   createdAt   DateTime @default(now()) @map("createdAt")
-  updatedAt   DateTime? @updatedAt @map("updatedAt")
 
   house      House         @relation(fields: [houseId], references: [id], onDelete: Cascade)
   creator    User          @relation("TaskCreator", fields: [createdBy], references: [id])
