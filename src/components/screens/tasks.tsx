@@ -159,6 +159,7 @@ export function TasksScreen() {
       body: JSON.stringify({ isDone: nextIsDone }),
     })
       .then((r) => { if (!r.ok) throw new Error(); })
+      .then(() => fetchTasks())
       .catch(() => {
         setTasks(snapshot);
         showToast('Не удалось обновить');
@@ -173,6 +174,7 @@ export function TasksScreen() {
 
     authFetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
       .then((r) => { if (!r.ok) throw new Error(); })
+      .then(() => fetchTasks())
       .catch(() => {
         setTasks(snapshot);
         showToast('Не удалось удалить');

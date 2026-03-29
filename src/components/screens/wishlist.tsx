@@ -162,15 +162,15 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
           <span className="text-[12px] font-medium" style={{ color: 'var(--ios-text-secondary)' }}>Друзья</span>
         </button>
 
-        {/* Animated title — large when empty, compact when has items */}
+        {/* Animated title — always large */}
         <div className="pr-[90px]">
-          <div className={hasItems ? 'space-y-0' : 'space-y-1'}>
+          <div className="space-y-0">
             {/* Line 1: Все! */}
             <motion.p
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0 }}
-              className={`font-black leading-[1.1] tracking-tight ${hasItems ? 'text-[22px]' : 'text-[36px]'}`}
+              className="font-black leading-[1.1] tracking-tight text-[30px]"
               style={{ color: darkMode ? '#F5F5F7' : '#1C1C1E' }}
             >
               Все!
@@ -180,7 +180,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className={`font-bold leading-[1.1] ${hasItems ? 'text-[17px]' : 'text-[28px]'}`}
+              className="font-bold leading-[1.1] text-[24px]"
               style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}
             >
               Чего,
@@ -193,23 +193,23 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
               className="flex items-center gap-2"
             >
               <p
-                className={`font-bold leading-[1.1] ${hasItems ? 'text-[17px]' : 'text-[28px]'}`}
+                className="font-bold leading-[1.1] text-[24px]"
                 style={{ color: darkMode ? '#AEAEB2' : '#8E8E93' }}
               >
                 Хочу я...
               </p>
               <button
                 onClick={() => setShowAddSheet(true)}
-                className={`rounded-full flex items-center gap-1.5 active:scale-90 transition-transform shrink-0 ${hasItems ? 'pl-2 pr-3 py-1' : 'pl-2.5 pr-4 py-1.5'}`}
+                className="rounded-full flex items-center gap-1.5 active:scale-90 transition-transform shrink-0 pl-2.5 pr-4 py-1.5"
                 style={{ background: '#FF2D55' }}
               >
                 <Heart
-                  size={hasItems ? 14 : 18}
+                  size={16}
                   color="white"
                   fill="white"
                   strokeWidth={0}
                 />
-                <span className={`font-semibold text-white ${hasItems ? 'text-[13px]' : 'text-[16px]'}`}>добавить</span>
+                <span className="font-semibold text-white text-[14px]">добавить</span>
               </button>
             </motion.div>
           </div>
@@ -230,7 +230,7 @@ function MyWishlist({ onOpenFriends }: { onOpenFriends: () => void }) {
 
       {/* ─── Cards ─── */}
       {hasItems && (
-        <div className="flex flex-col items-center px-4 mt-3">
+        <div className="flex flex-col items-center px-4 mt-6">
           <OwnCardStack items={items} currentIndex={currentIndex} onIndexChange={goToIndex} onDelete={handleDeleteItem} dark={darkMode} direction={direction} />
           <DotsIndicator total={items.length} current={currentIndex} dark={darkMode} onDotPress={goToIndex} />
         </div>
