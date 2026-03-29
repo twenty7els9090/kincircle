@@ -11,8 +11,43 @@ import type { TaskCategory, User } from '@/lib/types';
 const CATEGORY_LABELS: Record<string, string> = { shopping: 'Покупки', chores: 'Домашние дела' };
 const UNIT_OPTIONS = ['шт', 'кг', 'г', 'л', 'мл', 'уп'];
 
+/**
+ * Ensure user has an active house — auto-creates one if needed.
+ * Returns the house ID to use for the task.
+ */
+async function ensureHouse(displayName: string): Promise<string | null> {
+  const store = useAppStore.getState();
+
+  // Already have an active house
+  if (store.activeHouse?.id) return store.activeHouse.id;
+
+  // Try to find existing house
+  const res = await authFetch('/api/houses');
+  if (res.ok) {
+    const { houses } = await res.json();
+    const safe = Array.isArray(houses) ? houses : [];
+    if (safe.length > 0) {
+      store.setActiveHouse(safe[0]);
+      return safe[0].id;
+    }
+  }
+
+  // No house exists — auto-create "Мои задачи"
+  const createRes = await authFetch('/api/houses', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Мои задачи' }),
+  });
+  if (createRes.ok) {
+    const { house } = await createRes.json();
+    store.setActiveHouse(house);
+    return house.id;
+  }
+
+  return null;
+}
+
 export function CreateTaskScreen() {
-  const { currentUser, activeHouse, activeCategory, popScreen, showToast, darkMode } = useAppStore();
+  const { currentUser, activeCategory, popScreen, showToast, darkMode } = useAppStore();
 
   const [category, setCategory] = useState<TaskCategory>(activeCategory);
   const [title, setTitle] = useState('');
@@ -45,13 +80,20 @@ export function CreateTaskScreen() {
   }, [currentUser]);
 
   const handleCreate = async () => {
-    if (!title.trim() || !currentUser || !activeHouse) return;
+    if (!title.trim() || !currentUser) return;
     setLoading(true);
     try {
+      // Auto-create house if user doesn't have one
+      const houseId = await ensureHouse(currentUser.displayName || 'Пользователь');
+      if (!houseId) {
+        showToast('Не удалось создать дом');
+        return;
+      }
+
       const res = await authFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify({
-          houseId: activeHouse.id,
+          houseId,
           title: title.trim(),
           category,
           description: description.trim() || null,
