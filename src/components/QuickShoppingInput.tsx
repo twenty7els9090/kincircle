@@ -167,10 +167,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
         <button
           onClick={() => setShowDesc((v) => !v)}
           style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '8px',
-            background: showDesc ? '#007AFF' : (darkMode ? '#3A3A3C' : '#E5E5EA'),
+            width: '30px',
+            height: '30px',
+            borderRadius: '9px',
+            background: showDesc ? '#007AFF' : (darkMode ? '#3A3A3C' : '#F2F2F7'),
             border: 'none',
             cursor: 'pointer',
             display: 'flex',
@@ -182,10 +182,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
         >
           <span
             style={{
-              fontSize: '13px',
+              fontSize: '14px',
               fontWeight: 700,
               fontStyle: 'italic',
-              color: showDesc ? '#FFFFFF' : (darkMode ? '#F5F5F7' : '#1C1C1E'),
+              color: showDesc ? '#FFFFFF' : (darkMode ? '#AEAEB2' : '#8E8E93'),
               lineHeight: 1,
             }}
           >
@@ -199,9 +199,9 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             display: 'flex',
             alignItems: 'center',
             flexShrink: 0,
-            height: '28px',
-            background: darkMode ? 'rgba(255,255,255,0.06)' : '#F2F2F7',
-            borderRadius: '8px',
+            height: '30px',
+            background: darkMode ? '#3A3A3C' : '#F2F2F7',
+            borderRadius: '9px',
             overflow: 'hidden',
           }}
         >
@@ -222,7 +222,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
               padding: '0',
               paddingLeft: '6px',
               paddingRight: unit ? '0' : '6px',
-              fontSize: '12px',
+              fontSize: '13px',
               fontWeight: 400,
               textAlign: 'center',
               background: 'transparent',
@@ -235,10 +235,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           {unit && (
             <span
               style={{
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: 500,
                 color: '#007AFF',
-                paddingRight: '6px',
+                paddingRight: '8px',
                 pointerEvents: 'none',
                 whiteSpace: 'nowrap',
               }}
@@ -252,10 +252,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
         <button
           onClick={() => setShowAssignPicker(true)}
           style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '10px',
-            background: hasAssignees ? c.assignBg : (darkMode ? 'rgba(255,255,255,0.06)' : '#F2F2F7'),
+            width: '30px',
+            height: '30px',
+            borderRadius: '9px',
+            background: hasAssignees ? c.assignBg : (darkMode ? '#3A3A3C' : '#F2F2F7'),
             border: 'none',
             cursor: 'pointer',
             display: 'flex',
@@ -316,12 +316,12 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           onClick={handleSubmit}
           disabled={!hasText || loading}
           style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '10px',
+            width: '30px',
+            height: '30px',
+            borderRadius: '9px',
             background: hasText && !loading
               ? c.sendBg
-              : c.sendDisabled,
+              : (darkMode ? '#3A3A3C' : '#F2F2F7'),
             border: 'none',
             cursor: hasText ? 'pointer' : 'default',
             display: 'flex',
@@ -343,7 +343,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
               <path
                 d="M10 4v12M5 11l5 5 5-5"
-                stroke="#fff"
+                stroke={hasText ? '#fff' : (darkMode ? '#AEAEB2' : '#8E8E93')}
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
