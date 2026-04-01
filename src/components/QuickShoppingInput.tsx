@@ -1,39 +1,76 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useAppStore } from '@/lib/store';
 
-const CHIPS = ['1', '2', '3', '1 кг', '500г', '0.5 кг', 'уп', 'пач'];
+const UNITS = ['кг', 'гр', 'л', 'шт'];
 
 interface Props {
   onSubmit: (title: string, quantity: string | null) => Promise<void>;
 }
 
 export function QuickShoppingInput({ onSubmit }: Props) {
+  const darkMode = useAppStore((s) => s.darkMode);
   const [title, setTitle] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [unit, setUnit] = useState('');
+  const [showUnits, setShowUnits] = useState(false);
   const [loading, setLoading] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
 
+  const c = darkMode ? {
+    panelBg: '#2C2C2E',
+    inputBg: '#3A3A3C',
+    inputColor: '#F5F5F7',
+    placeholder: '#636366',
+    chipBg: '#3A3A3C',
+    chipColor: '#F5F5F7',
+    chipActiveBg: '#007AFF',
+    chipActiveColor: '#fff',
+    sendBg: '#007AFF',
+    sendDisabled: '#48484A',
+    border: 'rgba(255,255,255,0.08)',
+  } : {
+    panelBg: '#FFFFFF',
+    inputBg: '#F2F2F7',
+    inputColor: '#1C1C1E',
+    placeholder: '#C7C7CC',
+    chipBg: '#F2F2F7',
+    chipColor: '#1C1C1E',
+    chipActiveBg: '#007AFF',
+    chipActiveColor: '#fff',
+    sendBg: '#007AFF',
+    sendDisabled: '#C7C7CC',
+    border: 'rgba(0,0,0,0.06)',
+  };
+
   const handleSubmit = async () => {
     const trimmed = title.trim();
     if (!trimmed || loading) return;
+
+    const fullQty = quantity.trim()
+      ? (unit ? `${quantity.trim()} ${unit}` : quantity.trim())
+      : null;
+
     setLoading(true);
     try {
-      await onSubmit(trimmed, quantity.trim() || null);
+      await onSubmit(trimmed, fullQty);
       setTitle('');
       setQuantity('');
+      setUnit('');
+      setShowUnits(false);
       titleRef.current?.focus();
     } catch {
-      // Let parent handle error display
+      // Let parent handle error
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChipTap = (chip: string) => {
-    setQuantity((prev) => (prev === chip ? '' : chip));
-    titleRef.current?.focus();
+  const handleUnitTap = (u: string) => {
+    setUnit((prev) => (prev === u ? '' : u));
+    qtyRef.current?.focus();
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
@@ -52,60 +89,58 @@ export function QuickShoppingInput({ onSubmit }: Props) {
 
   const hasText = title.trim().length > 0;
 
-  const baseInput: React.CSSProperties = {
-    background: '#F2F2F7',
-    border: 'none',
-    outline: 'none',
-    color: '#000',
-    fontFamily: '-apple-system, system-ui, sans-serif',
-  };
-
   return (
-    <div style={{ background: '#fff', borderTop: '0.5px solid rgba(0,0,0,0.08)' }}>
-      {/* Chips row */}
+    <div
+      className="relative shrink-0"
+      style={{ background: c.panelBg, borderTop: `0.5px solid ${c.border}` }}
+    >
+      {/* Units chips — slide up from bottom */}
       <div
         style={{
           display: 'flex',
           gap: '8px',
-          padding: '8px 16px 4px',
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
+          padding: showUnits ? '8px 16px 6px' : '0 16px 0',
+          overflow: 'hidden',
+          maxHeight: showUnits ? '44px' : '0px',
+          opacity: showUnits ? 1 : 0,
+          transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease',
         }}
       >
-        {CHIPS.map((chip) => {
-          const active = quantity === chip;
+        {UNITS.map((u) => {
+          const active = unit === u;
           return (
             <button
-              key={chip}
-              onClick={() => handleChipTap(chip)}
+              key={u}
+              onClick={() => handleUnitTap(u)}
               style={{
                 flexShrink: 0,
-                padding: '5px 12px',
-                borderRadius: '14px',
+                padding: '6px 16px',
+                borderRadius: '20px',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: active ? 500 : 400,
-                height: '28px',
-                background: active ? '#007AFF' : '#F2F2F7',
-                color: active ? '#fff' : '#000',
-                transition: 'background 0.15s, color 0.15s',
+                fontSize: '14px',
+                fontWeight: active ? 600 : 400,
+                height: '32px',
+                background: active ? c.chipActiveBg : c.chipBg,
+                color: active ? c.chipActiveColor : c.chipColor,
               }}
             >
-              {chip}
+              {u}
             </button>
           );
         })}
       </div>
 
       {/* Input row */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 16px 10px',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '8px 16px',
+          paddingBottom: 'max(10px, env(safe-area-inset-bottom, 10px))',
+        }}
+      >
         <input
           ref={titleRef}
           type="text"
@@ -115,58 +150,78 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           placeholder="Что купить..."
           disabled={loading}
           style={{
-            ...baseInput,
             flex: 1,
-            borderRadius: '22px',
-            padding: '9px 16px',
+            height: '40px',
+            borderRadius: '20px',
+            padding: '0 16px',
             fontSize: '15px',
+            fontWeight: 400,
+            background: c.inputBg,
+            color: c.inputColor,
+            border: 'none',
+            outline: 'none',
           }}
         />
-        <input
-          ref={qtyRef}
-          type="text"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-          onKeyDown={handleQtyKeyDown}
-          placeholder="кол-во"
-          disabled={loading}
-          style={{
-            ...baseInput,
-            width: '68px',
-            borderRadius: '22px',
-            padding: '9px 8px',
-            fontSize: '13px',
-            textAlign: 'center',
-          }}
-        />
+        <div style={{ position: 'relative', width: '84px', flexShrink: 0 }}>
+          <input
+            ref={qtyRef}
+            type="text"
+            value={unit ? `${quantity} ${unit}` : quantity}
+            onChange={(e) => {
+              // Strip unit from typed value, keep only the number part
+              const raw = e.target.value.replace(/\s*(кг|гр|л|шт)\s*/g, '');
+              setQuantity(raw);
+            }}
+            onKeyDown={handleQtyKeyDown}
+            onFocus={() => setShowUnits(true)}
+            onBlur={() => {
+              // Delay hide to allow chip tap
+              setTimeout(() => setShowUnits(false), 200);
+            }}
+            placeholder="кол-во"
+            disabled={loading}
+            style={{
+              width: '100%',
+              height: '40px',
+              borderRadius: '20px',
+              padding: '0 8px',
+              fontSize: '14px',
+              fontWeight: 400,
+              textAlign: 'center',
+              background: c.inputBg,
+              color: c.inputColor,
+              border: 'none',
+              outline: 'none',
+            }}
+          />
+        </div>
         <button
           onClick={handleSubmit}
           disabled={!hasText || loading}
           style={{
-            width: '36px',
-            height: '36px',
+            width: '40px',
+            height: '40px',
             borderRadius: '50%',
-            background: hasText && !loading ? '#007AFF' : '#C7C7CC',
+            background: hasText && !loading ? c.sendBg : c.sendDisabled,
             border: 'none',
             cursor: hasText ? 'pointer' : 'default',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            transition: 'background 0.15s',
           }}
         >
           {loading ? (
             <div style={{
-              width: '14px',
-              height: '14px',
+              width: '16px',
+              height: '16px',
               border: '2px solid rgba(255,255,255,0.3)',
               borderTopColor: '#fff',
               borderRadius: '50%',
               animation: 'qs-spin 0.7s linear infinite',
             }} />
           ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path
                 d="M12 19V5M5 12l7-7 7 7"
                 stroke="#fff"
