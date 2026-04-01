@@ -37,10 +37,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
   }, [showAssignPicker, activeHouse]);
 
   const handleSubmit = async () => {
-    const trimmed = title.trim();
+    const trimmed = (title || '').trim();
     if (!trimmed || loading) return;
 
-    const fullQty = quantity.trim()
+    const fullQty = quantity?.trim()
       ? (unit ? `${quantity.trim()} ${unit}` : quantity.trim())
       : null;
 
