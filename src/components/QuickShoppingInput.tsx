@@ -31,6 +31,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     sendBg: '#007AFF',
     sendDisabled: '#48484A',
     border: 'rgba(255,255,255,0.08)',
+    unitBg: 'rgba(255,255,255,0.12)',
   } : {
     panelBg: '#FFFFFF',
     inputBg: '#F2F2F7',
@@ -43,6 +44,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     sendBg: '#007AFF',
     sendDisabled: '#C7C7CC',
     border: 'rgba(0,0,0,0.06)',
+    unitBg: 'rgba(0,0,0,0.06)',
   };
 
   const handleSubmit = async () => {
@@ -167,15 +169,25 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             minWidth: 0,
           }}
         />
-        <div style={{ position: 'relative', width: '72px', flexShrink: 0 }}>
+
+        {/* Quantity field with optional unit badge */}
+        <div
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            flexShrink: 0,
+            background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+            borderRadius: '18px',
+            overflow: 'hidden',
+          }}
+        >
           <input
             ref={qtyRef}
             type="text"
-            value={unit ? `${quantity} ${unit}` : quantity}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/\s*(кг|гр|л|шт)\s*/g, '');
-              setQuantity(raw);
-            }}
+            inputMode="decimal"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
             onKeyDown={handleQtyKeyDown}
             onFocus={() => setShowUnits(true)}
             onBlur={() => {
@@ -184,20 +196,37 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             placeholder="кол-во"
             disabled={loading}
             style={{
-              width: '100%',
+              width: unit ? '48px' : '68px',
               height: '36px',
-              borderRadius: '18px',
-              padding: '0 6px',
+              padding: '0',
+              paddingLeft: '10px',
+              paddingRight: unit ? '0' : '10px',
               fontSize: '14px',
               fontWeight: 400,
               textAlign: 'center',
-              background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+              background: 'transparent',
               color: c.inputColor,
               border: 'none',
               outline: 'none',
+              transition: 'width 0.15s ease',
             }}
           />
+          {unit && (
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#007AFF',
+                paddingRight: '10px',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {unit}
+            </span>
+          )}
         </div>
+
         <button
           onClick={handleSubmit}
           disabled={!hasText || loading}
