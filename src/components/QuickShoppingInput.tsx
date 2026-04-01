@@ -141,34 +141,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           borderBottom: showDesc ? `0.5px solid ${c.border}` : 'none',
         }}
       >
-        {/* Description toggle */}
-        <button
-          onClick={() => setShowDesc((v) => !v)}
-          style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '8px',
-            background: showDesc ? c.assignBg : 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            transition: 'background 0.15s',
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 7V4h16v3M9 20h6M12 4v16"
-              stroke={showDesc ? '#007AFF' : (darkMode ? '#AEAEB2' : '#8E8E93')}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-
         <input
           ref={titleRef}
           type="text"
@@ -180,7 +152,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           style={{
             flex: 1,
             height: '100%',
-            padding: '0 10px 0 8px',
+            padding: '0 10px 0 14px',
             fontSize: '15px',
             fontWeight: 400,
             background: 'transparent',
@@ -348,6 +320,39 @@ export function QuickShoppingInput({ onSubmit }: Props) {
               />
             </svg>
           )}
+        </button>
+
+        {/* Description toggle — right side */}
+        <button
+          onClick={() => setShowDesc((v) => !v)}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '10px',
+            background: showDesc ? c.assignBg : (darkMode ? 'rgba(255,255,255,0.06)' : '#F2F2F7'),
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            transition: 'background 0.15s',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <line
+              x1="12" y1="5" x2="12" y2="19"
+              stroke={showDesc ? '#007AFF' : (darkMode ? '#AEAEB2' : '#8E8E93')}
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <line
+              x1="5" y1="12" x2="19" y2="12"
+              stroke={showDesc ? '#007AFF' : (darkMode ? '#AEAEB2' : '#8E8E93')}
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
         </button>
       </div>
 
