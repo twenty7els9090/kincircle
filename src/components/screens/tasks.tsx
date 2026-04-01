@@ -28,6 +28,7 @@ export function TasksScreen() {
   const [houseSwitcherOpen, setHouseSwitcherOpen] = useState(false);
   const [houses, setHouses] = useState<(House & { memberRole: string; memberCount: number })[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [groupInvites, setGroupInvites] = useState<{
     id: string;
     house: { id: string; name: string; ownerId: string };
@@ -173,19 +174,25 @@ export function TasksScreen() {
       });
   };
 
-  // OPTIMISTIC delete — let Realtime handle refetch
+  // OPTIMISTIC delete — animate out, then remove
   const deleteTask = (task: Task) => {
     const snapshot = [...tasks];
-    setTasks(snapshot.filter((t) => t.id !== task.id));
-    showToast('Задача удалена');
+    // Mark as deleting for animation
+    setDeletingIds((prev) => new Set(prev).add(task.id));
 
+    // Send API request
     authFetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
       .then((r) => {
         if (!r.ok) throw new Error();
-        // Success — Realtime will refetch
+        // Success — remove after animation
+        setTimeout(() => {
+          setTasks((prev) => prev.filter((t) => t.id !== task.id));
+          setDeletingIds((prev) => { const next = new Set(prev); next.delete(task.id); return next; });
+        }, 300);
+        showToast('Задача удалена');
       })
       .catch(() => {
-        setTasks(snapshot);
+        setDeletingIds((prev) => { const next = new Set(prev); next.delete(task.id); return next; });
         showToast('Не удалось удалить');
       });
   };
@@ -376,7 +383,7 @@ export function TasksScreen() {
               <div className="space-y-1 mb-4">
                 <p className="ios-section-header mb-1 px-1">АКТИВНЫЕ · {activeTasks.length}</p>
                 {activeTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task)} dark={darkMode} />
+                  <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task)} onDelete={() => deleteTask(task)} isDeleting={deletingIds.has(task.id)} dark={darkMode} />
                 ))}
               </div>
             )}
@@ -391,7 +398,7 @@ export function TasksScreen() {
                   </button>
                 </div>
                 {doneTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task)} onDelete={() => deleteTask(task)} dark={darkMode} />
+                  <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task)} onDelete={() => deleteTask(task)} isDeleting={deletingIds.has(task.id)} dark={darkMode} />
                 ))}
               </div>
             )}
@@ -443,7 +450,7 @@ function formatDueDate(dateStr: string): string {
   return `${parseInt(parts[2], 10)} ${months[parseInt(parts[1], 10)] || parts[1]}`;
 }
 
-function TaskCard({ task, onToggle, onDelete, dark }: { task: Task; onToggle: () => void; onDelete?: () => void; dark?: boolean }) {
+function TaskCard({ task, onToggle, onDelete, isDeleting, dark }: { task: Task; onToggle: () => void; onDelete?: () => void; isDeleting?: boolean; dark?: boolean }) {
   const assignees = task.assignees || [];
   const hasAssignees = assignees.length > 0;
 
@@ -478,8 +485,17 @@ function TaskCard({ task, onToggle, onDelete, dark }: { task: Task; onToggle: ()
 
   return (
     <div
-      className="flex items-start gap-3 px-1 py-2 rounded-xl active:opacity-70 transition-opacity"
-      style={{ background: c.bg }}
+      className="flex items-start gap-3 px-1 py-2 rounded-xl"
+      style={{
+        background: c.bg,
+        opacity: isDeleting ? 0 : 1,
+        maxHeight: isDeleting ? '0px' : '200px',
+        marginTop: isDeleting ? '0px' : undefined,
+        marginBottom: isDeleting ? '0px' : undefined,
+        overflow: 'hidden',
+        transition: 'opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease',
+        pointerEvents: isDeleting ? 'none' : 'auto',
+      }}
     >
       {/* Checkbox circle */}
       <button
