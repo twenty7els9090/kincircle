@@ -351,8 +351,15 @@ export function TasksScreen() {
         />
       </div>
 
+      {/* Quick shopping input — below tabs */}
+      {activeCategory === 'shopping' && (
+        <div className="shrink-0 px-4 mb-2">
+          <QuickShoppingInput onSubmit={createQuickTask} />
+        </div>
+      )}
+
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto px-4" style={{ paddingBottom: activeCategory === 'shopping' ? '120px' : '40px' }}>
+      <div className="flex-1 overflow-y-auto px-4" style={{ paddingBottom: '40px' }}>
         {activeTasks.length === 0 && doneTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center mb-4" style={{ background: 'var(--ios-toggle-bg)' }}>
@@ -405,13 +412,6 @@ export function TasksScreen() {
               >Удалить</button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Quick shopping input — sticky at bottom */}
-      {activeCategory === 'shopping' && (
-        <div className="shrink-0 px-4 pb-2">
-          <QuickShoppingInput onSubmit={createQuickTask} />
         </div>
       )}
 
