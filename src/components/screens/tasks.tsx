@@ -485,9 +485,8 @@ function TaskCard({ task, onToggle, onDelete, isDeleting, dark }: { task: Task; 
 
   return (
     <div
-      className="flex items-start gap-3 px-1 py-2 rounded-xl"
+      className="flex items-start gap-3"
       style={{
-        background: c.bg,
         opacity: isDeleting ? 0 : 1,
         maxHeight: isDeleting ? '0px' : '200px',
         marginTop: isDeleting ? '0px' : undefined,
@@ -495,6 +494,9 @@ function TaskCard({ task, onToggle, onDelete, isDeleting, dark }: { task: Task; 
         overflow: 'hidden',
         transition: 'opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease',
         pointerEvents: isDeleting ? 'none' : 'auto',
+        borderBottom: `0.5px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+        paddingBottom: '10px',
+        paddingTop: '10px',
       }}
     >
       {/* Checkbox circle */}
