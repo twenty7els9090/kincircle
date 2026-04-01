@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 
-const UNITS = ['кг', 'гр', 'л', 'шт', 'уп'];
+const UNITS = ['кг', 'гр', 'л', 'мл', 'шт', 'уп'];
 
 interface Props {
   onSubmit: (title: string, quantity: string | null) => Promise<void>;
