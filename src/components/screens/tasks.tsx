@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Plus, ChevronDown, ShoppingCart, Sparkles, Trash2, RotateCcw, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
+import { QuickShoppingInput } from '@/components/QuickShoppingInput';
 import { AvatarCircle } from '@/components/shared/avatar-circle';
 import { BottomSheet } from '@/components/shared/bottom-sheet';
 import type { House, Task } from '@/lib/types';
@@ -189,6 +190,28 @@ export function TasksScreen() {
       });
   };
 
+  // Quick task creation (shopping)
+  const createQuickTask = async (title: string, quantity: string | null) => {
+    if (!currentUser || !activeHouse) return;
+    try {
+      const res = await authFetch('/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify({
+          houseId: activeHouse.id,
+          title,
+          category: 'shopping',
+          quantity,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const { task } = await res.json();
+      const store = useAppStore.getState();
+      store.setTasks([task, ...(Array.isArray(store.tasks) ? store.tasks : [])]);
+    } catch {
+      showToast('Не удалось добавить');
+    }
+  };
+
   // Clear all done — only removes tasks in current category, not cross-category
   const clearDoneTasks = () => {
     setShowClearConfirm(false);
@@ -305,14 +328,16 @@ export function TasksScreen() {
             </div>
             {houses.length >= 1 && <ChevronDown size={18} color="#8E8E93" className="ml-1 mt-[-16px]" />}
           </button>
-          <button
-            onClick={() => pushScreen('create-task')}
-            className="flex items-center gap-1 px-3 py-2 rounded-full"
-            style={{ backgroundColor: '#007AFF' }}
-          >
-            <Plus size={18} color="white" strokeWidth={2.5} />
-            <span className="text-white text-[15px] font-semibold">Задача</span>
-          </button>
+          {activeCategory === 'chores' && (
+            <button
+              onClick={() => pushScreen('create-task')}
+              className="flex items-center gap-1 px-3 py-2 rounded-full"
+              style={{ backgroundColor: '#007AFF' }}
+            >
+              <Plus size={18} color="white" strokeWidth={2.5} />
+              <span className="text-white text-[15px] font-semibold">Задача</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -327,7 +352,7 @@ export function TasksScreen() {
       </div>
 
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto px-4 pb-20">
+      <div className="flex-1 overflow-y-auto px-4" style={{ paddingBottom: activeCategory === 'shopping' ? '120px' : '80px' }}>
         {activeTasks.length === 0 && doneTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center mb-4" style={{ background: 'var(--ios-toggle-bg)' }}>
@@ -383,6 +408,13 @@ export function TasksScreen() {
         </div>
       )}
 
+      {/* Quick shopping input */}
+      {activeCategory === 'shopping' && (
+        <div className="shrink-0">
+          <QuickShoppingInput onSubmit={createQuickTask} />
+        </div>
+      )}
+
       {/* Group switcher */}
       <BottomSheet open={houseSwitcherOpen} onClose={() => setHouseSwitcherOpen(false)} title="ВЫБРАТЬ ГРУППУ">
         <div className="px-4 pb-8">
@@ -434,7 +466,10 @@ function TaskCard({ task, onToggle, onDelete, dark }: { task: Task; onToggle: ()
   return (
     <div className="rounded-2xl overflow-hidden transition-all" style={{ background: colors.cardBg, boxShadow: task.isDone ? 'none' : '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)', opacity: task.isDone ? 0.65 : 1 }}>
       <div className="px-4 pt-3.5 pb-0">
-        <p className={`text-[18px] font-semibold leading-snug ${task.isDone ? 'line-through' : ''}`} style={{ color: colors.titleColor }}>{task.title}</p>
+        <p className={`text-[18px] font-semibold leading-snug inline ${task.isDone ? 'line-through' : ''}`} style={{ color: colors.titleColor }}>{task.title}</p>
+        {task.category === 'shopping' && task.quantity && (
+          <span className="text-[13px]" style={{ color: colors.descColor, marginLeft: '6px' }}>{task.quantity}</span>
+        )}
         {(task.description || metaParts.length > 0) && (
           <p className="text-[15px] leading-snug mt-[2px]" style={{ color: colors.descColor }}>
             {task.description}{task.description && metaParts.length > 0 && ' · '}{metaParts.join(' · ')}
