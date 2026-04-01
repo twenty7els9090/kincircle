@@ -94,11 +94,12 @@ export function QuickShoppingInput({ onSubmit }: Props) {
       className="relative shrink-0"
       style={{ background: c.panelBg, borderTop: `0.5px solid ${c.border}` }}
     >
-      {/* Units chips — slide up from bottom */}
+      {/* Units chips — animate from bottom */}
       <div
         style={{
           display: 'flex',
           gap: '8px',
+          justifyContent: 'center',
           padding: showUnits ? '8px 16px 6px' : '0 16px 0',
           overflow: 'hidden',
           maxHeight: showUnits ? '44px' : '0px',
@@ -114,7 +115,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
               onClick={() => handleUnitTap(u)}
               style={{
                 flexShrink: 0,
-                padding: '6px 16px',
+                padding: '6px 18px',
                 borderRadius: '20px',
                 border: 'none',
                 cursor: 'pointer',
@@ -123,6 +124,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
                 height: '32px',
                 background: active ? c.chipActiveBg : c.chipBg,
                 color: active ? c.chipActiveColor : c.chipColor,
+                transition: 'background 0.15s, color 0.15s',
               }}
             >
               {u}
@@ -131,14 +133,17 @@ export function QuickShoppingInput({ onSubmit }: Props) {
         })}
       </div>
 
-      {/* Input row */}
+      {/* Input row — single pill bar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          padding: '8px 16px',
-          paddingBottom: 'max(10px, env(safe-area-inset-bottom, 10px))',
+          gap: '8px',
+          margin: '8px 12px',
+          marginBottom: 'max(12px, calc(env(safe-area-inset-bottom, 12px) + 4px))',
+          background: c.inputBg,
+          borderRadius: '24px',
+          padding: '4px 4px 4px 18px',
         }}
       >
         <input
@@ -151,44 +156,42 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           disabled={loading}
           style={{
             flex: 1,
-            height: '40px',
-            borderRadius: '20px',
-            padding: '0 16px',
+            height: '36px',
+            padding: '0',
             fontSize: '15px',
             fontWeight: 400,
-            background: c.inputBg,
+            background: 'transparent',
             color: c.inputColor,
             border: 'none',
             outline: 'none',
+            minWidth: 0,
           }}
         />
-        <div style={{ position: 'relative', width: '84px', flexShrink: 0 }}>
+        <div style={{ position: 'relative', width: '72px', flexShrink: 0 }}>
           <input
             ref={qtyRef}
             type="text"
             value={unit ? `${quantity} ${unit}` : quantity}
             onChange={(e) => {
-              // Strip unit from typed value, keep only the number part
               const raw = e.target.value.replace(/\s*(кг|гр|л|шт)\s*/g, '');
               setQuantity(raw);
             }}
             onKeyDown={handleQtyKeyDown}
             onFocus={() => setShowUnits(true)}
             onBlur={() => {
-              // Delay hide to allow chip tap
               setTimeout(() => setShowUnits(false), 200);
             }}
             placeholder="кол-во"
             disabled={loading}
             style={{
               width: '100%',
-              height: '40px',
-              borderRadius: '20px',
-              padding: '0 8px',
+              height: '36px',
+              borderRadius: '18px',
+              padding: '0 6px',
               fontSize: '14px',
               fontWeight: 400,
               textAlign: 'center',
-              background: c.inputBg,
+              background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
               color: c.inputColor,
               border: 'none',
               outline: 'none',
@@ -199,8 +202,8 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           onClick={handleSubmit}
           disabled={!hasText || loading}
           style={{
-            width: '40px',
-            height: '40px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
             background: hasText && !loading ? c.sendBg : c.sendDisabled,
             border: 'none',
@@ -209,6 +212,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            overflow: 'hidden',
           }}
         >
           {loading ? (
@@ -221,9 +225,9 @@ export function QuickShoppingInput({ onSubmit }: Props) {
               animation: 'qs-spin 0.7s linear infinite',
             }} />
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ display: 'block' }}>
               <path
-                d="M12 19V5M5 12l7-7 7 7"
+                d="M10 4v12M5 11l5 5 5-5"
                 stroke="#fff"
                 strokeWidth="2.5"
                 strokeLinecap="round"
