@@ -79,7 +79,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     );
   };
 
-  const hasText = title.trim().length > 0;
+  const hasText = (title || '').trim().length > 0;
   const hasAssignees = selectedIds.length > 0;
 
   const c = darkMode ? {
