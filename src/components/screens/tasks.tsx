@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Plus, ChevronDown, ShoppingCart, Sparkles, Trash2, RotateCcw, Users } from 'lucide-react';
+import { Plus, ChevronDown, ShoppingCart, Sparkles, Trash2, Users } from 'lucide-react';
 import { useAppStore, authFetch } from '@/lib/store';
 import { SegmentedControl } from '@/components/shared/segmented-control';
 import { QuickShoppingInput } from '@/components/QuickShoppingInput';
@@ -373,7 +373,7 @@ export function TasksScreen() {
         ) : (
           <>
             {activeTasks.length > 0 && (
-              <div className="space-y-3 mb-6">
+              <div className="space-y-1 mb-4">
                 <p className="ios-section-header mb-1 px-1">АКТИВНЫЕ · {activeTasks.length}</p>
                 {activeTasks.map((task) => (
                   <TaskCard key={task.id} task={task} onToggle={() => toggleTask(task)} dark={darkMode} />
@@ -381,7 +381,7 @@ export function TasksScreen() {
               </div>
             )}
             {doneTasks.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-1">
                 <div className="flex items-center justify-between px-1">
                   <p className="ios-section-header">
                     {activeCategory === 'shopping' ? 'ДОБАВЛЕННЫЕ' : 'ВЫПОЛНЕННЫЕ'} · {doneTasks.length}
@@ -454,61 +454,110 @@ function TaskCard({ task, onToggle, onDelete, dark }: { task: Task; onToggle: ()
   if (task.category === 'chores' && task.dueDate) metaParts.push(formatDueDate(task.dueDate));
   if (task.category === 'chores' && task.dueTime) metaParts.push(task.dueTime);
 
-  const colors = dark ? {
-    cardBg: '#2C2C2E', titleColor: task.isDone ? '#636366' : '#F5F5F7', descColor: '#8E8E93',
-    labelColor: '#8E8E93', separator: 'rgba(255,255,255,0.08)', blueBg: 'rgba(0,122,255,0.2)',
-    redBg: 'rgba(255,59,48,0.15)', avatarBg: '#3A3A3C',
+  const c = dark ? {
+    bg: 'transparent',
+    titleColor: task.isDone ? '#48484A' : '#F5F5F7',
+    metaColor: '#636366',
+    checkBg: '#007AFF',
+    checkEmpty: '#48484A',
+    checkDone: '#007AFF',
+    avatarBg: '#3A3A3C',
+    actionColor: '#636366',
+    dangerColor: '#FF453A',
   } : {
-    cardBg: '#FFFFFF', titleColor: task.isDone ? '#C7C7CC' : '#1C1C1E', descColor: '#8E8E93',
-    labelColor: '#AEAEB2', separator: 'rgba(0,0,0,0.06)', blueBg: '#E8F0FE',
-    redBg: '#FFF0F0', avatarBg: '#F2F2F7',
+    bg: 'transparent',
+    titleColor: task.isDone ? '#C7C7CC' : '#1C1C1E',
+    metaColor: '#8E8E93',
+    checkBg: '#007AFF',
+    checkEmpty: '#D1D1D6',
+    checkDone: '#007AFF',
+    avatarBg: '#F2F2F7',
+    actionColor: '#8E8E93',
+    dangerColor: '#FF3B30',
   };
 
   return (
-    <div className="rounded-2xl overflow-hidden transition-all" style={{ background: colors.cardBg, boxShadow: task.isDone ? 'none' : '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)', opacity: task.isDone ? 0.65 : 1 }}>
-      <div className="px-4 pt-3.5 pb-0">
-        <p className={`text-[18px] font-semibold leading-snug inline ${task.isDone ? 'line-through' : ''}`} style={{ color: colors.titleColor }}>{task.title}</p>
-        {task.category === 'shopping' && task.quantity && (
-          <span className="text-[13px]" style={{ color: colors.descColor, marginLeft: '6px' }}>{task.quantity}</span>
+    <div
+      className="flex items-start gap-3 px-1 py-2 rounded-xl active:opacity-70 transition-opacity"
+      style={{ background: c.bg }}
+    >
+      {/* Checkbox circle */}
+      <button
+        onClick={onToggle}
+        className="shrink-0 mt-[3px] flex items-center justify-center active:opacity-50 transition-all"
+        style={{
+          width: '24px',
+          height: '24px',
+          borderRadius: '50%',
+          background: task.isDone ? c.checkDone : 'transparent',
+          border: task.isDone ? 'none' : `2px solid ${c.checkEmpty}`,
+        }}
+      >
+        {task.isDone && (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         )}
-        {(task.description || metaParts.length > 0) && (
-          <p className="text-[15px] leading-snug mt-[2px]" style={{ color: colors.descColor }}>
-            {task.description}{task.description && metaParts.length > 0 && ' · '}{metaParts.join(' · ')}
-          </p>
-        )}
-        <div className="flex items-center gap-2 mt-3">
-          <span className="text-[12px] font-medium" style={{ color: colors.labelColor }}>
-            {hasAssignees ? 'Назначено:' : 'Для всей группы'}
-          </span>
-          {assignees.slice(0, 4).map((a) => (
-            <AvatarCircle key={a.id} userId={a.userId} displayName={a.user?.displayName || '?'} size={22} fontSize={9} avatarUrl={a.user?.avatarUrl} />
-          ))}
-          {assignees.length > 4 && (
-            <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: colors.avatarBg, color: colors.labelColor }}>
-              +{assignees.length - 4}
+      </button>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p
+              className={`text-[16px] font-medium leading-snug ${task.isDone ? 'line-through' : ''}`}
+              style={{ color: c.titleColor }}
+            >
+              {task.title}
+            </p>
+            {metaParts.length > 0 && (
+              <p className="text-[13px] mt-[1px]" style={{ color: c.metaColor }}>
+                {metaParts.join(' · ')}
+              </p>
+            )}
+            {task.description && (
+              <p className="text-[13px] mt-[1px]" style={{ color: c.metaColor }}>
+                {task.description}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Assignees + actions row */}
+        <div className="flex items-center justify-between mt-1.5">
+          <div className="flex items-center gap-1.5">
+            {hasAssignees ? (
+              <>
+                {assignees.slice(0, 3).map((a) => (
+                  <AvatarCircle key={a.id} userId={a.userId} displayName={a.user?.displayName || '?'} size={20} fontSize={8} avatarUrl={a.user?.avatarUrl} />
+                ))}
+                {assignees.length > 3 && (
+                  <span className="text-[11px] font-medium" style={{ color: c.metaColor }}>
+                    +{assignees.length - 3}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-[11px] font-medium" style={{ color: c.metaColor }}>
+                Для всех
+              </span>
+            )}
+          </div>
+
+          {/* Done actions */}
+          {task.isDone && (
+            <div className="flex items-center gap-2">
+              <button onClick={onToggle} className="text-[12px] font-medium active:opacity-50" style={{ color: c.actionColor }}>
+                Вернуть
+              </button>
+              {onDelete && (
+                <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-[12px] font-medium active:opacity-50" style={{ color: c.dangerColor }}>
+                  Удалить
+                </button>
+              )}
             </div>
           )}
         </div>
-      </div>
-      <div className="px-4 pt-3 pb-3.5 mt-2" style={{ borderTop: `0.5px solid ${colors.separator}` }}>
-        {!task.isDone ? (
-          <button onClick={onToggle} className="w-full rounded-xl text-[15px] font-semibold h-[44px] flex items-center justify-center active:opacity-70 transition-opacity" style={{ background: '#007AFF', color: '#fff' }}>
-            {task.category === 'shopping' ? 'Добавить' : 'Сделать'}
-          </button>
-        ) : (
-          <div className="flex items-center justify-end gap-2">
-            <button onClick={onToggle} className="flex items-center gap-1.5 px-3 py-[6px] rounded-full active:opacity-70 transition-opacity" style={{ background: colors.blueBg }}>
-              <RotateCcw size={14} color="#007AFF" strokeWidth={2} />
-              <span className="text-[13px] font-medium" style={{ color: '#007AFF' }}>Вернуть</span>
-            </button>
-            {onDelete && (
-              <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="flex items-center gap-1.5 px-3 py-[6px] rounded-full active:opacity-70 transition-opacity" style={{ background: colors.redBg }}>
-                <Trash2 size={14} color="#FF3B30" strokeWidth={2} />
-                <span className="text-[13px] font-medium" style={{ color: '#FF3B30' }}>Удалить</span>
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
