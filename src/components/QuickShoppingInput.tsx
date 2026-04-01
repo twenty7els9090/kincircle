@@ -18,6 +18,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
   const [loading, setLoading] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
+  const unitsRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async () => {
     const trimmed = title.trim();
@@ -44,7 +45,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
 
   const handleUnitTap = (u: string) => {
     setUnit((prev) => (prev === u ? '' : u));
-    qtyRef.current?.focus();
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
@@ -65,8 +65,9 @@ export function QuickShoppingInput({ onSubmit }: Props) {
 
   return (
     <div className="relative shrink-0">
-      {/* Chips row — slides in below the pill */}
+      {/* Chips row — ABOVE the pill bar, slides down from top */}
       <div
+        ref={unitsRef}
         style={{
           display: 'flex',
           gap: '8px',
@@ -74,8 +75,9 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           overflow: 'hidden',
           maxHeight: showUnits ? '40px' : '0px',
           opacity: showUnits ? 1 : 0,
-          padding: showUnits ? '0 12px 6px' : '0 12px',
-          transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease',
+          marginTop: showUnits ? '0px' : '-8px',
+          padding: showUnits ? '0 4px 8px' : '0 4px',
+          transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease, margin-top 0.25s ease',
         }}
       >
         {UNITS.map((u) => {
@@ -83,6 +85,8 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           return (
             <button
               key={u}
+              // onPointerDown prevents blur on qty input
+              onPointerDown={(e) => e.preventDefault()}
               onClick={() => handleUnitTap(u)}
               style={{
                 flexShrink: 0,
@@ -166,9 +170,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             onChange={(e) => setQuantity(e.target.value)}
             onKeyDown={handleQtyKeyDown}
             onFocus={() => setShowUnits(true)}
-            onBlur={() => {
-              setTimeout(() => setShowUnits(false), 200);
-            }}
+            onBlur={() => setShowUnits(false)}
             placeholder="кол-во"
             disabled={loading}
             style={{
