@@ -22,7 +22,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showUnits, setShowUnits] = useState(false);
   const [showAssignPicker, setShowAssignPicker] = useState(false);
-  const [members, setMembers] = useState<User[]>([]);
+  const [members, setMembers] = useState<{ id: string; user?: User }[]>([]);
   const [loading, setLoading] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
@@ -389,12 +389,14 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             </p>
           ) : (
             members.map((member) => {
-              const isSelected = selectedIds.includes(member.id);
-              const isMe = member.id === currentUser?.id;
+              const u = member.user;
+              if (!u) return null;
+              const isSelected = selectedIds.includes(u.id);
+              const isMe = u.id === currentUser?.id;
               return (
                 <button
-                  key={member.id}
-                  onClick={() => toggleAssignee(member.id)}
+                  key={u.id}
+                  onClick={() => toggleAssignee(u.id)}
                   style={{
                     width: '100%',
                     display: 'flex',
@@ -410,15 +412,15 @@ export function QuickShoppingInput({ onSubmit }: Props) {
                   }}
                 >
                   <AvatarCircle
-                    userId={member.id}
-                    displayName={member.displayName}
+                    userId={u.id}
+                    displayName={u.displayName || '?'}
                     size={36}
                     fontSize={14}
-                    avatarUrl={member.avatarUrl}
+                    avatarUrl={u.avatarUrl}
                   />
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <p style={{ fontSize: '15px', fontWeight: 500, color: c.inputColor, margin: 0 }}>
-                      {member.displayName}
+                      {u.displayName || 'Без имени'}
                       {isMe && <span style={{ color: '#8E8E93', fontWeight: 400 }}> (вы)</span>}
                     </p>
                   </div>
