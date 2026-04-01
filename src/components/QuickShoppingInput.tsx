@@ -214,7 +214,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             onKeyDown={handleQtyKeyDown}
             onFocus={() => setShowUnits(true)}
             onBlur={() => setShowUnits(false)}
-            placeholder="кол-во"
+            placeholder="вес"
             disabled={loading}
             style={{
               width: unit ? '44px' : '62px',
