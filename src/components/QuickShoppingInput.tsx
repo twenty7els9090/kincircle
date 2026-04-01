@@ -68,6 +68,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
       {/* Chips row — ABOVE the pill bar, slides down from top */}
       <div
         ref={unitsRef}
+        onMouseDown={(e) => e.preventDefault()}
         style={{
           display: 'flex',
           gap: '8px',
@@ -85,8 +86,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           return (
             <button
               key={u}
-              // onPointerDown prevents blur on qty input
-              onPointerDown={(e) => e.preventDefault()}
               onClick={() => handleUnitTap(u)}
               style={{
                 flexShrink: 0,
