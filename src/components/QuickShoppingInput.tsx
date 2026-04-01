@@ -388,62 +388,137 @@ export function QuickShoppingInput({ onSubmit }: Props) {
               Нет участников
             </p>
           ) : (
-            members.map((member) => {
-              const u = member.user;
-              if (!u) return null;
-              const isSelected = selectedIds.includes(u.id);
-              const isMe = u.id === currentUser?.id;
-              return (
-                <button
-                  key={u.id}
-                  onClick={() => toggleAssignee(u.id)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 0',
-                    borderBottom: `0.5px solid ${c.separator}`,
-                    background: 'transparent',
-                    borderLeft: 'none',
-                    borderRight: 'none',
-                    borderTop: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <AvatarCircle
-                    userId={u.id}
-                    displayName={u.displayName || '?'}
-                    size={36}
-                    fontSize={14}
-                    avatarUrl={u.avatarUrl}
-                  />
-                  <div style={{ flex: 1, textAlign: 'left' }}>
-                    <p style={{ fontSize: '15px', fontWeight: 500, color: c.inputColor, margin: 0 }}>
-                      {u.displayName || 'Без имени'}
-                      {isMe && <span style={{ color: '#8E8E93', fontWeight: 400 }}> (вы)</span>}
-                    </p>
-                  </div>
-                  {/* Checkmark */}
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '12px',
-                    background: isSelected ? '#007AFF' : (darkMode ? '#48484A' : '#E5E5EA'),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'background 0.15s',
-                  }}>
-                    {isSelected && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </div>
-                </button>
-              );
-            })
+            <div>
+              {/* Everyone option */}
+              <button
+                onClick={() => setSelectedIds([])}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 0',
+                  borderBottom: `0.5px solid ${c.separator}`,
+                  background: 'transparent',
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  borderTop: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: !hasAssignees ? '#007AFF' : (darkMode ? '#48484A' : '#E5E5EA'),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+                      stroke={!hasAssignees ? '#fff' : '#8E8E93'}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle
+                      cx="9"
+                      cy="7"
+                      r="4"
+                      stroke={!hasAssignees ? '#fff' : '#8E8E93'}
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+                      stroke={!hasAssignees ? '#fff' : '#8E8E93'}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <p style={{ fontSize: '15px', fontWeight: 500, color: c.inputColor, margin: 0 }}>
+                    Все участники
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#8E8E93', margin: '2px 0 0' }}>
+                    {hasAssignees ? 'Нажмите, чтобы сбросить' : 'По умолчанию для всех'}
+                  </p>
+                </div>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '12px',
+                  background: !hasAssignees ? '#007AFF' : (darkMode ? '#48484A' : '#E5E5EA'),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  {!hasAssignees && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+              {members.map((member) => {
+                const u = member.user;
+                if (!u) return null;
+                const isSelected = selectedIds.includes(u.id);
+                const isMe = u.id === currentUser?.id;
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => toggleAssignee(u.id)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 0',
+                      borderBottom: `0.5px solid ${c.separator}`,
+                      background: 'transparent',
+                      borderLeft: 'none',
+                      borderRight: 'none',
+                      borderTop: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <AvatarCircle
+                      userId={u.id}
+                      displayName={u.displayName || '?'}
+                      size={36}
+                      fontSize={14}
+                      avatarUrl={u.avatarUrl}
+                    />
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                      <p style={{ fontSize: '15px', fontWeight: 500, color: c.inputColor, margin: 0 }}>
+                        {u.displayName || 'Без имени'}
+                        {isMe && <span style={{ color: '#8E8E93', fontWeight: 400 }}> (вы)</span>}
+                      </p>
+                    </div>
+                    <div style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '12px',
+                      background: isSelected ? '#007AFF' : (darkMode ? '#48484A' : '#E5E5EA'),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'background 0.15s',
+                    }}>
+                      {isSelected && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       </BottomSheet>
