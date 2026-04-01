@@ -163,6 +163,36 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           }}
         />
 
+        {/* Description toggle — before quantity */}
+        <button
+          onClick={() => setShowDesc((v) => !v)}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '8px',
+            background: showDesc ? c.assignBg : 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            transition: 'background 0.15s',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '15px',
+              fontWeight: 600,
+              fontStyle: 'italic',
+              color: showDesc ? '#007AFF' : (darkMode ? '#AEAEB2' : '#8E8E93'),
+              lineHeight: 1,
+            }}
+          >
+            T
+          </span>
+        </button>
+
         {/* Quantity + unit badge */}
         <div
           style={{
@@ -320,34 +350,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
               />
             </svg>
           )}
-        </button>
-
-        {/* Description toggle — right side */}
-        <button
-          onClick={() => setShowDesc((v) => !v)}
-          style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '10px',
-            background: showDesc ? c.assignBg : (darkMode ? 'rgba(255,255,255,0.06)' : '#F2F2F7'),
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            transition: 'background 0.15s',
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 6h16M12 6v13"
-              stroke={showDesc ? '#007AFF' : (darkMode ? '#AEAEB2' : '#8E8E93')}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
         </button>
       </div>
 
