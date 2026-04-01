@@ -198,7 +198,7 @@ export function TasksScreen() {
   };
 
   // Quick task creation (shopping)
-  const createQuickTask = async (title: string, quantity: string | null, assigneeIds: string[]) => {
+  const createQuickTask = async (title: string, quantity: string | null, description: string | null, assigneeIds: string[]) => {
     if (!currentUser || !activeHouse) return;
     try {
       const res = await authFetch('/api/tasks', {
@@ -208,6 +208,7 @@ export function TasksScreen() {
           title,
           category: 'shopping',
           quantity,
+          description,
           assigneeIds: assigneeIds.length > 0 ? assigneeIds : [],
         }),
       });
@@ -454,124 +455,135 @@ function TaskCard({ task, onToggle, onDelete, isDeleting, dark }: { task: Task; 
   const assignees = task.assignees || [];
   const hasAssignees = assignees.length > 0;
 
-  const metaParts: string[] = [];
-  if (task.category === 'shopping' && task.quantity) {
-    metaParts.push(`${task.quantity}${task.unit ? ` ${task.unit}` : ''}`);
-  }
-  if (task.category === 'chores' && task.dueDate) metaParts.push(formatDueDate(task.dueDate));
-  if (task.category === 'chores' && task.dueTime) metaParts.push(task.dueTime);
+  // Build inline quantity badge
+  const qtyText = task.category === 'shopping' && task.quantity
+    ? `${task.quantity}${task.unit ? ` ${task.unit}` : ''}`
+    : null;
+  // Build due badge for chores
+  const dueText = task.category === 'chores' && (task.dueDate || task.dueTime)
+    ? [task.dueDate ? formatDueDate(task.dueDate) : '', task.dueTime || ''].filter(Boolean).join(' ')
+    : null;
+
+  const badge = qtyText || dueText;
 
   const c = dark ? {
-    bg: 'transparent',
     titleColor: task.isDone ? '#48484A' : '#F5F5F7',
     metaColor: '#636366',
-    checkBg: '#007AFF',
     checkEmpty: '#48484A',
     checkDone: '#007AFF',
-    avatarBg: '#3A3A3C',
+    badgeBg: 'rgba(255,255,255,0.08)',
+    badgeColor: '#AEAEB2',
     actionColor: '#636366',
     dangerColor: '#FF453A',
+    avatarBg: '#3A3A3C',
+    separator: 'rgba(255,255,255,0.06)',
   } : {
-    bg: 'transparent',
     titleColor: task.isDone ? '#C7C7CC' : '#1C1C1E',
     metaColor: '#8E8E93',
-    checkBg: '#007AFF',
     checkEmpty: '#D1D1D6',
     checkDone: '#007AFF',
-    avatarBg: '#F2F2F7',
+    badgeBg: '#F2F2F7',
+    badgeColor: '#8E8E93',
     actionColor: '#8E8E93',
     dangerColor: '#FF3B30',
+    avatarBg: '#F2F2F7',
+    separator: 'rgba(0,0,0,0.06)',
   };
 
   return (
     <div
-      className="flex items-start gap-3"
       style={{
         opacity: isDeleting ? 0 : 1,
-        maxHeight: isDeleting ? '0px' : '200px',
+        maxHeight: isDeleting ? '0px' : '100px',
         marginTop: isDeleting ? '0px' : undefined,
         marginBottom: isDeleting ? '0px' : undefined,
         overflow: 'hidden',
         transition: 'opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease',
         pointerEvents: isDeleting ? 'none' : 'auto',
-        borderBottom: `0.5px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-        paddingBottom: '10px',
-        paddingTop: '10px',
+        borderBottom: `0.5px solid ${c.separator}`,
+        padding: '10px 0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
       }}
     >
       {/* Checkbox circle */}
       <button
         onClick={onToggle}
-        className="shrink-0 mt-[3px] flex items-center justify-center active:opacity-50 transition-all"
+        className="shrink-0 flex items-center justify-center active:opacity-50 transition-all"
         style={{
-          width: '24px',
-          height: '24px',
+          width: '22px',
+          height: '22px',
           borderRadius: '50%',
           background: task.isDone ? c.checkDone : 'transparent',
           border: task.isDone ? 'none' : `2px solid ${c.checkEmpty}`,
         }}
       >
         {task.isDone && (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
             <path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </button>
 
-      {/* Content */}
+      {/* Content: 2 layers */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p
-              className={`text-[16px] font-medium leading-snug ${task.isDone ? 'line-through' : ''}`}
-              style={{ color: c.titleColor }}
+        {/* Layer 1: Title + badge */}
+        <div className="flex items-center gap-2">
+          <p
+            className={`text-[15px] font-medium truncate ${task.isDone ? 'line-through' : ''}`}
+            style={{ color: c.titleColor, flex: 1, minWidth: 0 }}
+          >
+            {task.title}
+          </p>
+          {badge && (
+            <span
+              className="shrink-0"
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: c.badgeColor,
+                background: c.badgeBg,
+                padding: '2px 8px',
+                borderRadius: '8px',
+                whiteSpace: 'nowrap',
+              }}
             >
-              {task.title}
-            </p>
-            {metaParts.length > 0 && (
-              <p className="text-[13px] mt-[1px]" style={{ color: c.metaColor }}>
-                {metaParts.join(' · ')}
-              </p>
-            )}
-            {task.description && (
-              <p className="text-[13px] mt-[1px]" style={{ color: c.metaColor }}>
-                {task.description}
-              </p>
-            )}
-          </div>
+              {badge}
+            </span>
+          )}
+          {task.isDone && onDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="shrink-0 flex items-center justify-center active:opacity-50"
+              style={{
+                width: '22px', height: '22px', borderRadius: '8px',
+                background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6" stroke={c.dangerColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
         </div>
 
-        {/* Assignees + actions row */}
-        <div className="flex items-center justify-between mt-1.5">
-          <div className="flex items-center gap-1.5">
-            {hasAssignees ? (
-              <>
-                {assignees.slice(0, 3).map((a) => (
-                  <AvatarCircle key={a.id} userId={a.userId} displayName={a.user?.displayName || '?'} size={20} fontSize={8} avatarUrl={a.user?.avatarUrl} />
-                ))}
-                {assignees.length > 3 && (
-                  <span className="text-[11px] font-medium" style={{ color: c.metaColor }}>
-                    +{assignees.length - 3}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-[11px] font-medium" style={{ color: c.metaColor }}>
-                Для всех
-              </span>
-            )}
-          </div>
-
-          {/* Done actions */}
-          {task.isDone && (
-            <div className="flex items-center gap-2">
-              <button onClick={onToggle} className="text-[12px] font-medium active:opacity-50" style={{ color: c.actionColor }}>
-                Вернуть
-              </button>
-              {onDelete && (
-                <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-[12px] font-medium active:opacity-50" style={{ color: c.dangerColor }}>
-                  Удалить
-                </button>
+        {/* Layer 2: Description + Assignees */}
+        <div className="flex items-center gap-1 mt-0.5">
+          {task.description && (
+            <span className="text-[12px] truncate" style={{ color: c.metaColor, maxWidth: '60%' }}>
+              {task.description}
+            </span>
+          )}
+          {hasAssignees && (
+            <div className="flex items-center gap-1 ml-auto">
+              {assignees.slice(0, 3).map((a) => (
+                <AvatarCircle key={a.id} userId={a.userId} displayName={a.user?.displayName || '?'} size={16} fontSize={6} avatarUrl={a.user?.avatarUrl} />
+              ))}
+              {assignees.length > 3 && (
+                <span className="text-[10px] font-medium" style={{ color: c.metaColor }}>
+                  +{assignees.length - 3}
+                </span>
               )}
             </div>
           )}

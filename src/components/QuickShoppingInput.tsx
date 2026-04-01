@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 const UNITS = ['кг', 'гр', 'л', 'мл', 'шт', 'уп'];
 
 interface Props {
-  onSubmit: (title: string, quantity: string | null, assigneeIds: string[]) => Promise<void>;
+  onSubmit: (title: string, quantity: string | null, description: string | null, assigneeIds: string[]) => Promise<void>;
 }
 
 export function QuickShoppingInput({ onSubmit }: Props) {
@@ -17,14 +17,17 @@ export function QuickShoppingInput({ onSubmit }: Props) {
   const activeHouse = useAppStore((s) => s.activeHouse);
   const currentUser = useAppStore((s) => s.currentUser);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showUnits, setShowUnits] = useState(false);
+  const [showDesc, setShowDesc] = useState(false);
   const [showAssignPicker, setShowAssignPicker] = useState(false);
   const [members, setMembers] = useState<{ id: string; user?: User }[]>([]);
   const [loading, setLoading] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  const descRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
 
   // Fetch members when assign picker opens
@@ -43,14 +46,17 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     const fullQty = quantity?.trim()
       ? (unit ? `${quantity.trim()} ${unit}` : quantity.trim())
       : null;
+    const desc = (description || '').trim() || null;
 
     setLoading(true);
     try {
-      await onSubmit(trimmed, fullQty, selectedIds);
+      await onSubmit(trimmed, fullQty, desc, selectedIds);
       setTitle('');
+      setDescription('');
       setQuantity('');
       setUnit('');
       setShowUnits(false);
+      setShowDesc(false);
       titleRef.current?.focus();
     } catch {
       // Let parent handle error
@@ -60,6 +66,17 @@ export function QuickShoppingInput({ onSubmit }: Props) {
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!showDesc) {
+        qtyRef.current?.focus();
+      } else {
+        descRef.current?.focus();
+      }
+    }
+  };
+
+  const handleDescKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       qtyRef.current?.focus();
@@ -115,14 +132,43 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           alignItems: 'center',
           gap: '6px',
           height: '44px',
-          padding: '0 6px 0 4px',
+          padding: '0 6px 0 6px',
           background: darkMode ? '#2C2C2E' : '#FFFFFF',
-          borderRadius: '14px',
+          borderRadius: showDesc ? '14px 14px 0 0' : '14px',
           boxShadow: darkMode
             ? '0 1px 4px rgba(0,0,0,0.3)'
             : '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+          borderBottom: showDesc ? `0.5px solid ${c.border}` : 'none',
         }}
       >
+        {/* Description toggle */}
+        <button
+          onClick={() => setShowDesc((v) => !v)}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '8px',
+            background: showDesc ? c.assignBg : 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            transition: 'background 0.15s',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M4 7V4h16v3M9 20h6M12 4v16"
+              stroke={showDesc ? '#007AFF' : (darkMode ? '#AEAEB2' : '#8E8E93')}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
         <input
           ref={titleRef}
           type="text"
@@ -134,7 +180,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           style={{
             flex: 1,
             height: '100%',
-            padding: '0 14px',
+            padding: '0 10px 0 8px',
             fontSize: '15px',
             fontWeight: 400,
             background: 'transparent',
@@ -303,6 +349,46 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             </svg>
           )}
         </button>
+      </div>
+
+      {/* Description row — slides down below pill bar */}
+      <div
+        style={{
+          height: showDesc ? '38px' : '0px',
+          overflow: 'hidden',
+          transition: 'height 0.2s ease',
+          background: darkMode ? '#2C2C2E' : '#FFFFFF',
+          borderRadius: '0 0 14px 14px',
+          boxShadow: showDesc
+            ? (darkMode
+              ? '0 2px 4px rgba(0,0,0,0.2)'
+              : '0 1px 3px rgba(0,0,0,0.04)')
+            : 'none',
+          paddingLeft: '42px',
+          paddingRight: '8px',
+          borderBottom: showDesc ? `0.5px solid ${c.border}` : 'none',
+        }}
+      >
+        <input
+          ref={descRef}
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={handleDescKeyDown}
+          placeholder="Заметка (необязательно)..."
+          disabled={loading}
+          style={{
+            width: '100%',
+            height: '100%',
+            padding: '0',
+            fontSize: '13px',
+            fontWeight: 400,
+            background: 'transparent',
+            color: description ? c.inputColor : '#8E8E93',
+            border: 'none',
+            outline: 'none',
+          }}
+        />
       </div>
 
       {/* Chips — fixed-height container below pill bar, chips slide up inside */}
