@@ -23,7 +23,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     panelBg: '#2C2C2E',
     inputBg: '#3A3A3C',
     inputColor: '#F5F5F7',
-    placeholder: '#636366',
     chipBg: '#3A3A3C',
     chipColor: '#F5F5F7',
     chipActiveBg: '#007AFF',
@@ -31,12 +30,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     sendBg: '#007AFF',
     sendDisabled: '#48484A',
     border: 'rgba(255,255,255,0.08)',
-    unitBg: 'rgba(255,255,255,0.12)',
   } : {
     panelBg: '#FFFFFF',
     inputBg: '#F2F2F7',
     inputColor: '#1C1C1E',
-    placeholder: '#C7C7CC',
     chipBg: '#F2F2F7',
     chipColor: '#1C1C1E',
     chipActiveBg: '#007AFF',
@@ -44,7 +41,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     sendBg: '#007AFF',
     sendDisabled: '#C7C7CC',
     border: 'rgba(0,0,0,0.06)',
-    unitBg: 'rgba(0,0,0,0.06)',
   };
 
   const handleSubmit = async () => {
@@ -96,45 +92,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
       className="relative shrink-0"
       style={{ background: c.panelBg, borderTop: `0.5px solid ${c.border}` }}
     >
-      {/* Units chips — animate from bottom */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          justifyContent: 'center',
-          padding: showUnits ? '8px 16px 6px' : '0 16px 0',
-          overflow: 'hidden',
-          maxHeight: showUnits ? '44px' : '0px',
-          opacity: showUnits ? 1 : 0,
-          transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease',
-        }}
-      >
-        {UNITS.map((u) => {
-          const active = unit === u;
-          return (
-            <button
-              key={u}
-              onClick={() => handleUnitTap(u)}
-              style={{
-                flexShrink: 0,
-                padding: '6px 18px',
-                borderRadius: '20px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: active ? 600 : 400,
-                height: '32px',
-                background: active ? c.chipActiveBg : c.chipBg,
-                color: active ? c.chipActiveColor : c.chipColor,
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >
-              {u}
-            </button>
-          );
-        })}
-      </div>
-
       {/* Input row — single pill bar */}
       <div
         style={{
@@ -142,10 +99,11 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           alignItems: 'center',
           gap: '8px',
           margin: '8px 12px',
-          marginBottom: 'max(12px, calc(env(safe-area-inset-bottom, 12px) + 4px))',
+          marginBottom: showUnits ? '6px' : 'max(12px, calc(env(safe-area-inset-bottom, 12px) + 4px))',
           background: c.inputBg,
           borderRadius: '24px',
           padding: '4px 4px 4px 18px',
+          transition: 'margin-bottom 0.25s ease',
         }}
       >
         <input
@@ -265,6 +223,46 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             </svg>
           )}
         </button>
+      </div>
+
+      {/* Units chips — slide up from below the input bar */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          justifyContent: 'center',
+          padding: showUnits ? '0 16px 6px' : '0 16px',
+          paddingBottom: showUnits ? 'max(6px, calc(env(safe-area-inset-bottom, 6px) + 2px))' : 'max(0px, env(safe-area-inset-bottom, 0px))',
+          overflow: 'hidden',
+          maxHeight: showUnits ? '44px' : '0px',
+          opacity: showUnits ? 1 : 0,
+          transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease',
+        }}
+      >
+        {UNITS.map((u) => {
+          const active = unit === u;
+          return (
+            <button
+              key={u}
+              onClick={() => handleUnitTap(u)}
+              style={{
+                flexShrink: 0,
+                padding: '6px 18px',
+                borderRadius: '20px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: active ? 600 : 400,
+                height: '32px',
+                background: active ? c.chipActiveBg : c.chipBg,
+                color: active ? c.chipActiveColor : c.chipColor,
+                transition: 'background 0.15s, color 0.15s',
+              }}
+            >
+              {u}
+            </button>
+          );
+        })}
       </div>
       <style>{`@keyframes qs-spin { to { transform: rotate(360deg) } }`}</style>
     </div>
