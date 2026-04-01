@@ -18,7 +18,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
   const [loading, setLoading] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
-  const unitsRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async () => {
     const trimmed = title.trim();
@@ -43,10 +42,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
     }
   };
 
-  const handleUnitTap = (u: string) => {
-    setUnit((prev) => (prev === u ? '' : u));
-  };
-
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -65,53 +60,6 @@ export function QuickShoppingInput({ onSubmit }: Props) {
 
   return (
     <div className="relative shrink-0">
-      {/* Chips row — ABOVE the pill bar, slides down from top */}
-      <div
-        ref={unitsRef}
-        onMouseDown={(e) => e.preventDefault()}
-        style={{
-          display: 'flex',
-          gap: '8px',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          maxHeight: showUnits ? '40px' : '0px',
-          opacity: showUnits ? 1 : 0,
-          marginTop: showUnits ? '0px' : '-8px',
-          padding: showUnits ? '0 4px 8px' : '0 4px',
-          transition: 'max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease, margin-top 0.25s ease',
-        }}
-      >
-        {UNITS.map((u) => {
-          const active = unit === u;
-          return (
-            <button
-              key={u}
-              onClick={() => handleUnitTap(u)}
-              style={{
-                flexShrink: 0,
-                padding: '5px 16px',
-                borderRadius: '18px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: active ? 600 : 400,
-                height: '28px',
-                lineHeight: '18px',
-                background: active
-                  ? '#007AFF'
-                  : darkMode
-                    ? 'rgba(255,255,255,0.1)'
-                    : 'rgba(0,0,0,0.05)',
-                color: active ? '#fff' : darkMode ? '#AEAEB2' : '#8E8E93',
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >
-              {u}
-            </button>
-          );
-        })}
-      </div>
-
       {/* Pill bar */}
       <div
         style={{
@@ -149,7 +97,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           }}
         />
 
-        {/* Quantity + unit */}
+        {/* Quantity + unit badge */}
         <div
           style={{
             display: 'flex',
@@ -246,6 +194,52 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             </svg>
           )}
         </button>
+      </div>
+
+      {/* Chips — BELOW pill bar, appear from bottom */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          maxHeight: showUnits ? '40px' : '0px',
+          opacity: showUnits ? 1 : 0,
+          marginTop: showUnits ? '8px' : '0px',
+          transition: 'max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease',
+        }}
+      >
+        {UNITS.map((u) => {
+          const active = unit === u;
+          return (
+            <button
+              key={u}
+              onMouseDown={(e) => e.preventDefault()}
+              onTouchStart={(e) => e.preventDefault()}
+              onClick={() => setUnit((prev) => (prev === u ? '' : u))}
+              style={{
+                flexShrink: 0,
+                padding: '5px 16px',
+                borderRadius: '18px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: active ? 600 : 400,
+                height: '28px',
+                lineHeight: '18px',
+                background: active
+                  ? '#007AFF'
+                  : darkMode
+                    ? 'rgba(255,255,255,0.1)'
+                    : 'rgba(0,0,0,0.05)',
+                color: active ? '#fff' : darkMode ? '#AEAEB2' : '#8E8E93',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+            >
+              {u}
+            </button>
+          );
+        })}
       </div>
       <style>{`@keyframes qs-spin { to { transform: rotate(360deg) } }`}</style>
     </div>
