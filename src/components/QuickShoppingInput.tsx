@@ -170,7 +170,7 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             width: '28px',
             height: '28px',
             borderRadius: '8px',
-            background: showDesc ? c.assignBg : 'transparent',
+            background: showDesc ? '#007AFF' : (darkMode ? '#3A3A3C' : '#E5E5EA'),
             border: 'none',
             cursor: 'pointer',
             display: 'flex',
@@ -182,10 +182,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
         >
           <span
             style={{
-              fontSize: '15px',
-              fontWeight: 600,
+              fontSize: '13px',
+              fontWeight: 700,
               fontStyle: 'italic',
-              color: showDesc ? '#007AFF' : (darkMode ? '#AEAEB2' : '#8E8E93'),
+              color: showDesc ? '#FFFFFF' : (darkMode ? '#F5F5F7' : '#1C1C1E'),
               lineHeight: 1,
             }}
           >
@@ -199,9 +199,9 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             display: 'flex',
             alignItems: 'center',
             flexShrink: 0,
-            height: '32px',
+            height: '28px',
             background: darkMode ? 'rgba(255,255,255,0.06)' : '#F2F2F7',
-            borderRadius: '10px',
+            borderRadius: '8px',
             overflow: 'hidden',
           }}
         >
@@ -217,12 +217,12 @@ export function QuickShoppingInput({ onSubmit }: Props) {
             placeholder="вес"
             disabled={loading}
             style={{
-              width: unit ? '44px' : '62px',
+              width: unit ? '36px' : '48px',
               height: '100%',
               padding: '0',
-              paddingLeft: '8px',
-              paddingRight: unit ? '0' : '8px',
-              fontSize: '14px',
+              paddingLeft: '6px',
+              paddingRight: unit ? '0' : '6px',
+              fontSize: '12px',
               fontWeight: 400,
               textAlign: 'center',
               background: 'transparent',
@@ -235,10 +235,10 @@ export function QuickShoppingInput({ onSubmit }: Props) {
           {unit && (
             <span
               style={{
-                fontSize: '13px',
+                fontSize: '11px',
                 fontWeight: 500,
                 color: '#007AFF',
-                paddingRight: '10px',
+                paddingRight: '6px',
                 pointerEvents: 'none',
                 whiteSpace: 'nowrap',
               }}
