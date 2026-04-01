@@ -196,50 +196,58 @@ export function QuickShoppingInput({ onSubmit }: Props) {
         </button>
       </div>
 
-      {/* Chips — BELOW pill bar, appear from bottom */}
+      {/* Chips — BELOW pill bar, expand from bottom using grid */}
       <div
         style={{
-          display: 'flex',
-          gap: '8px',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          maxHeight: showUnits ? '40px' : '0px',
-          opacity: showUnits ? 1 : 0,
-          marginTop: showUnits ? '8px' : '0px',
-          transition: 'max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease',
+          display: 'grid',
+          gridTemplateRows: showUnits ? '1fr' : '0fr',
+          transition: 'grid-template-rows 0.25s ease',
         }}
       >
-        {UNITS.map((u) => {
-          const active = unit === u;
-          return (
-            <button
-              key={u}
-              onMouseDown={(e) => e.preventDefault()}
-              onTouchStart={(e) => e.preventDefault()}
-              onClick={() => setUnit((prev) => (prev === u ? '' : u))}
-              style={{
-                flexShrink: 0,
-                padding: '5px 16px',
-                borderRadius: '18px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: active ? 600 : 400,
-                height: '28px',
-                lineHeight: '18px',
-                background: active
-                  ? '#007AFF'
-                  : darkMode
-                    ? 'rgba(255,255,255,0.1)'
-                    : 'rgba(0,0,0,0.05)',
-                color: active ? '#fff' : darkMode ? '#AEAEB2' : '#8E8E93',
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >
-              {u}
-            </button>
-          );
-        })}
+        <div style={{ overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              justifyContent: 'center',
+              paddingTop: '8px',
+              opacity: showUnits ? 1 : 0,
+              transition: 'opacity 0.2s ease 0.05s',
+            }}
+          >
+            {UNITS.map((u) => {
+              const active = unit === u;
+              return (
+                <button
+                  key={u}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={() => setUnit((prev) => (prev === u ? '' : u))}
+                  style={{
+                    flexShrink: 0,
+                    padding: '5px 16px',
+                    borderRadius: '18px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: active ? 600 : 400,
+                    height: '28px',
+                    lineHeight: '18px',
+                    background: active
+                      ? '#007AFF'
+                      : darkMode
+                        ? 'rgba(255,255,255,0.1)'
+                        : 'rgba(0,0,0,0.05)',
+                    color: active ? '#fff' : darkMode ? '#AEAEB2' : '#8E8E93',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                >
+                  {u}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
       <style>{`@keyframes qs-spin { to { transform: rotate(360deg) } }`}</style>
     </div>
