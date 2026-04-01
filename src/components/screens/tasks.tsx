@@ -191,7 +191,7 @@ export function TasksScreen() {
   };
 
   // Quick task creation (shopping)
-  const createQuickTask = async (title: string, quantity: string | null) => {
+  const createQuickTask = async (title: string, quantity: string | null, assigneeIds: string[]) => {
     if (!currentUser || !activeHouse) return;
     try {
       const res = await authFetch('/api/tasks', {
@@ -201,6 +201,7 @@ export function TasksScreen() {
           title,
           category: 'shopping',
           quantity,
+          assigneeIds: assigneeIds.length > 0 ? assigneeIds : [],
         }),
       });
       if (!res.ok) throw new Error();
