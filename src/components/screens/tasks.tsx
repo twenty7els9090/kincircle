@@ -127,7 +127,11 @@ export function TasksScreen() {
     authFetch(`/api/tasks?houseId=${houseId}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then(({ tasks: t }) => {
-        setTasks(Array.isArray(t) ? t : []);
+        const pending = useAppStore.getState().pendingDeleteTaskIds;
+        const filtered = pending.size > 0 && Array.isArray(t)
+          ? t.filter((task: Task) => !pending.has(task.id))
+          : t;
+        setTasks(Array.isArray(filtered) ? filtered : []);
         setTasksLoadedHouseId(houseId);
       })
       .catch(() => {});
