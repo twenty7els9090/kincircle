@@ -37,25 +37,33 @@ export function useRealtime() {
   }, [authToken]);
 
   // ─── Step 2: Refetch helpers ───
+  // Debounce: multiple realtime events (Task + TaskAssignee + HouseMember)
+  // fire within ~100ms of each other, so we only refetch once.
+  const refetchTasksTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const refetchTasks = useCallback(async () => {
-    const hid = useAppStore.getState().activeHouse?.id;
-    if (!hid) return;
-    try {
-      const token = useAppStore.getState().authToken;
-      if (!token) return;
-      const res = await fetch(`/api/tasks?houseId=${hid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (Array.isArray(data?.tasks)) {
-        const pending = useAppStore.getState().pendingDeleteTaskIds;
-        const filtered = pending.size > 0
-          ? data.tasks.filter((t: { id: string }) => !pending.has(t.id))
-          : data.tasks;
-        useAppStore.getState().setTasks(filtered);
-      }
-    } catch { /* silent */ }
+    if (refetchTasksTimer.current) clearTimeout(refetchTasksTimer.current);
+    refetchTasksTimer.current = setTimeout(async () => {
+      refetchTasksTimer.current = null;
+      const hid = useAppStore.getState().activeHouse?.id;
+      if (!hid) return;
+      try {
+        const token = useAppStore.getState().authToken;
+        if (!token) return;
+        const res = await fetch(`/api/tasks?houseId=${hid}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data?.tasks)) {
+          const pending = useAppStore.getState().pendingDeleteTaskIds;
+          const filtered = pending.size > 0
+            ? data.tasks.filter((t: { id: string }) => !pending.has(t.id))
+            : data.tasks;
+          useAppStore.getState().setTasks(filtered);
+        }
+      } catch { /* silent */ }
+    }, 300);
   }, []);
 
   const refetchFriends = useCallback(async () => {
@@ -99,14 +107,14 @@ export function useRealtime() {
     if (!userId || !houseId || !authToken || !supabase) return;
 
     const name = `rt:task:${houseId}`;
-    channelsRef.current.push(name);
+    if (!channelsRef.current.includes(name)) channelsRef.current.push(name);
 
     const channel = supabase
       .channel(name)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'Task', filter: `houseId=eq.${houseId}` },
-        () => { setTimeout(refetchTasks, 200); },
+        () => refetchTasks(),
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') console.log(`[RT] ${name}: SUBSCRIBED ✓`);
@@ -125,14 +133,14 @@ export function useRealtime() {
     if (!userId || !houseId || !authToken || !supabase) return;
 
     const name = `rt:ta:${houseId}`;
-    channelsRef.current.push(name);
+    if (!channelsRef.current.includes(name)) channelsRef.current.push(name);
 
     const channel = supabase
       .channel(name)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'TaskAssignee' },
-        () => { setTimeout(refetchTasks, 200); },
+        () => refetchTasks(),
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') console.log(`[RT] ${name}: SUBSCRIBED ✓`);
@@ -150,7 +158,7 @@ export function useRealtime() {
     if (!userId || !houseId || !authToken || !supabase) return;
 
     const name = `rt:hm:${houseId}`;
-    channelsRef.current.push(name);
+    if (!channelsRef.current.includes(name)) channelsRef.current.push(name);
 
     const channel = supabase
       .channel(name)
@@ -180,7 +188,8 @@ export function useRealtime() {
 
     const name1 = `rt:gi-r:${userId}`;
     const name2 = `rt:gi-s:${userId}`;
-    channelsRef.current.push(name1, name2);
+    if (!channelsRef.current.includes(name1)) channelsRef.current.push(name1);
+    if (!channelsRef.current.includes(name2)) channelsRef.current.push(name2);
 
     // Invites where I'm the recipient
     const ch1 = supabase
@@ -220,7 +229,8 @@ export function useRealtime() {
 
     const name1 = `rt:fr:${userId}`;
     const name2 = `rt:ft:${userId}`;
-    channelsRef.current.push(name1, name2);
+    if (!channelsRef.current.includes(name1)) channelsRef.current.push(name1);
+    if (!channelsRef.current.includes(name2)) channelsRef.current.push(name2);
 
     const ch1 = supabase
       .channel(name1)
@@ -258,7 +268,8 @@ export function useRealtime() {
 
     const name1 = `rt:wl:${userId}`;
     const name2 = `rt:wi:${userId}`;
-    channelsRef.current.push(name1, name2);
+    if (!channelsRef.current.includes(name1)) channelsRef.current.push(name1);
+    if (!channelsRef.current.includes(name2)) channelsRef.current.push(name2);
 
     const ch1 = supabase
       .channel(name1)

@@ -237,10 +237,15 @@ export function TasksScreen() {
 
     if (currentCatDoneIds.length === 0) return;
 
+    // Mark all as pending delete so realtime doesn't bring them back
+    const store = useAppStore.getState();
+    for (const id of currentCatDoneIds) {
+      store.addPendingDeleteTaskId(id);
+    }
+
     const snapshot = [...tasks];
-    // Only remove the tasks we're actually deleting
-    const deletingIds = new Set(currentCatDoneIds);
-    setTasks(snapshot.filter((t) => !deletingIds.has(t.id)));
+    const deleteSet = new Set(currentCatDoneIds);
+    setTasks(snapshot.filter((t) => !deleteSet.has(t.id)));
     showToast('Очищено');
 
     Promise.all(
@@ -249,9 +254,19 @@ export function TasksScreen() {
           if (!r.ok) throw new Error();
         })
       )
-    ).catch(() => {
-      // On any failure, rollback only and let next Realtime fetch fix the state
+    ).then(() => {
+      // Success — clean up pending deletes
+      const s = useAppStore.getState();
+      for (const id of currentCatDoneIds) {
+        s.removePendingDeleteTaskId(id);
+      }
+    }).catch(() => {
+      // On failure, rollback state and clean up pending
       setTasks(snapshot);
+      const s = useAppStore.getState();
+      for (const id of currentCatDoneIds) {
+        s.removePendingDeleteTaskId(id);
+      }
       showToast('Ошибка очистки');
     });
   };
