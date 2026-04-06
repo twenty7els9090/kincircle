@@ -48,7 +48,13 @@ export function useRealtime() {
       });
       if (!res.ok) return;
       const data = await res.json();
-      if (Array.isArray(data?.tasks)) useAppStore.getState().setTasks(data.tasks);
+      if (Array.isArray(data?.tasks)) {
+        const pending = useAppStore.getState().pendingDeleteTaskIds;
+        const filtered = pending.size > 0
+          ? data.tasks.filter((t: { id: string }) => !pending.has(t.id))
+          : data.tasks;
+        useAppStore.getState().setTasks(filtered);
+      }
     } catch { /* silent */ }
   }, []);
 

@@ -123,6 +123,9 @@ interface AppState {
   setActiveCategory: (cat: TaskCategory) => void;
   tasks: Task[];
   setTasks: (tasks: Task[]) => void;
+  pendingDeleteTaskIds: Set<string>;
+  addPendingDeleteTaskId: (id: string) => void;
+  removePendingDeleteTaskId: (id: string) => void;
   tasksLoadedHouseId: string | null;
   setTasksLoadedHouseId: (id: string | null) => void;
 
@@ -202,6 +205,9 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveCategory: (cat) => set({ activeCategory: cat }),
   tasks: [] as Task[],
   setTasks: (tasks) => set({ tasks: Array.isArray(tasks) ? tasks : [] }),
+  pendingDeleteTaskIds: new Set<string>(),
+  addPendingDeleteTaskId: (id) => set((s) => ({ pendingDeleteTaskIds: new Set(s.pendingDeleteTaskIds).add(id) })),
+  removePendingDeleteTaskId: (id) => set((s) => { const next = new Set(s.pendingDeleteTaskIds); next.delete(id); return { pendingDeleteTaskIds: next }; }),
   tasksLoadedHouseId: null,
   setTasksLoadedHouseId: (id) => set({ tasksLoadedHouseId: id }),
 

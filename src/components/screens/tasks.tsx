@@ -174,25 +174,28 @@ export function TasksScreen() {
       });
   };
 
-  // OPTIMISTIC delete — animate out, then remove
+  // OPTIMISTIC delete — mark pending in store, animate out, then clean up
   const deleteTask = (task: Task) => {
-    const snapshot = [...tasks];
-    // Mark as deleting for animation
+    // Immediately mark in store so realtime refetch filters it out
+    useAppStore.getState().addPendingDeleteTaskId(task.id);
+    // Mark for animation
     setDeletingIds((prev) => new Set(prev).add(task.id));
 
-    // Send API request
     authFetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
       .then((r) => {
         if (!r.ok) throw new Error();
-        // Success — remove after animation
+        showToast('Задача удалена');
+        // Remove from visual state after animation
         setTimeout(() => {
           setTasks((prev) => prev.filter((t) => t.id !== task.id));
           setDeletingIds((prev) => { const next = new Set(prev); next.delete(task.id); return next; });
+          useAppStore.getState().removePendingDeleteTaskId(task.id);
         }, 300);
-        showToast('Задача удалена');
       })
       .catch(() => {
+        // Rollback everything on error
         setDeletingIds((prev) => { const next = new Set(prev); next.delete(task.id); return next; });
+        useAppStore.getState().removePendingDeleteTaskId(task.id);
         showToast('Не удалось удалить');
       });
   };
